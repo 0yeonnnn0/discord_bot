@@ -300,7 +300,10 @@ export default function Settings() {
 
               <div className="btn-group">
                 <button className="btn btn-primary" onClick={savePreset}>Save Preset</button>
-                <button className="btn btn-ghost" onClick={() => activatePreset(editingPreset.id)}>
+                <button className="btn btn-ghost" onClick={async () => {
+                  await savePreset()
+                  await activatePreset(editingPreset.id)
+                }}>
                   Save & Activate
                 </button>
               </div>
