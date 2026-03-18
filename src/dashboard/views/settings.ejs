@@ -8,60 +8,154 @@
 </head>
 <body>
   <nav>
-    <div class="nav-brand">Discord Bot</div>
+    <div class="nav-brand">TORO Bot =^0w0^=</div>
     <div class="nav-links">
-      <a href="/">상태</a>
+      <a href="/">대시보드</a>
       <a href="/logs">로그</a>
       <a href="/settings">설정</a>
     </div>
   </nav>
   <main>
     <div class="dashboard">
+
+      <!-- 응답 확률 -->
       <h1>설정</h1>
-      <div class="settings-form">
-        <div class="form-group">
-          <label for="replyChance">자동 응답 확률</label>
+      <div class="section">
+        <h2>자동 응답 확률</h2>
+        <div class="settings-form">
           <div class="slider-wrap">
-            <input
-              type="range"
-              id="replyChance"
-              min="0"
-              max="100"
-              value="<%= Math.round(config.replyChance * 100) %>"
-            >
+            <input type="range" id="replyChance" min="0" max="100"
+              value="<%= Math.round(config.replyChance * 100) %>">
             <span id="chanceValue"><%= Math.round(config.replyChance * 100) %>%</span>
           </div>
+          <button id="saveChanceBtn" class="btn">저장</button>
+          <span id="chanceStatus"></span>
         </div>
-        <button id="saveBtn" class="btn">저장</button>
-        <span id="saveStatus"></span>
       </div>
+
+      <!-- RAG 현황 -->
+      <div class="section">
+        <h2>RAG 현황</h2>
+        <div class="cards" style="max-width: 400px">
+          <div class="card">
+            <div class="card-label">저장된 벡터</div>
+            <div class="card-value"><%= ragStats.vectorCount %>개</div>
+          </div>
+          <div class="card">
+            <div class="card-label">인덱스 상태</div>
+            <div class="card-value <%= ragStats.indexCreated ? 'text-green' : 'text-red' %>">
+              <%= ragStats.indexCreated ? '활성' : '비활성' %>
+            </div>
+          </div>
+        </div>
+        <p class="hint">대화 5개마다 자동으로 벡터가 저장됨</p>
+      </div>
+
+      <!-- 시스템 프롬프트 -->
+      <div class="section">
+        <h2>시스템 프롬프트</h2>
+        <textarea id="promptEditor" rows="20"><%= prompt %></textarea>
+        <div class="btn-group">
+          <button id="savePromptBtn" class="btn">프롬프트 저장</button>
+          <button id="resetPromptBtn" class="btn btn-secondary">기본값 복원</button>
+          <span id="promptStatus"></span>
+        </div>
+        <p class="hint">저장 시 즉시 반영됨. 컨테이너 재시작하면 기본값으로 돌아감</p>
+      </div>
+
+      <!-- 응답 테스트 -->
+      <div class="section">
+        <h2>응답 테스트</h2>
+        <div class="test-area">
+          <div class="test-input-wrap">
+            <input type="text" id="testMessage" placeholder="테스트 메시지를 입력하세요" />
+            <button id="testBtn" class="btn">전송</button>
+          </div>
+          <div id="testResult" class="test-result" style="display:none">
+            <div class="test-label">봇 응답:</div>
+            <div id="testReply"></div>
+          </div>
+          <div id="testLoading" class="hint" style="display:none">응답 생성 중...</div>
+        </div>
+      </div>
+
     </div>
   </main>
+
   <script>
+    // --- 응답 확률 ---
     const slider = document.getElementById('replyChance');
-    const label = document.getElementById('chanceValue');
-    const btn = document.getElementById('saveBtn');
-    const status = document.getElementById('saveStatus');
+    const chanceLabel = document.getElementById('chanceValue');
+    slider.addEventListener('input', () => chanceLabel.textContent = slider.value + '%');
 
-    slider.addEventListener('input', () => {
-      label.textContent = slider.value + '%';
-    });
-
-    btn.addEventListener('click', async () => {
+    document.getElementById('saveChanceBtn').addEventListener('click', async () => {
       const res = await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ replyChance: slider.value / 100 }),
       });
-      if (res.ok) {
-        status.textContent = '저장 완료!';
-        status.className = 'text-green';
-      } else {
-        status.textContent = '저장 실패';
-        status.className = 'text-red';
-      }
-      setTimeout(() => { status.textContent = ''; }, 2000);
+      const status = document.getElementById('chanceStatus');
+      status.textContent = res.ok ? '저장 완료!' : '실패';
+      status.className = res.ok ? 'text-green' : 'text-red';
+      setTimeout(() => status.textContent = '', 2000);
     });
+
+    // --- 시스템 프롬프트 ---
+    document.getElementById('savePromptBtn').addEventListener('click', async () => {
+      const prompt = document.getElementById('promptEditor').value;
+      const res = await fetch('/api/prompt', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const status = document.getElementById('promptStatus');
+      status.textContent = res.ok ? '저장 완료!' : '실패';
+      status.className = res.ok ? 'text-green' : 'text-red';
+      setTimeout(() => status.textContent = '', 2000);
+    });
+
+    document.getElementById('resetPromptBtn').addEventListener('click', async () => {
+      if (!confirm('기본 프롬프트로 복원하시겠습니까?')) return;
+      const res = await fetch('/api/prompt', { method: 'DELETE' });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('promptEditor').value = data.prompt;
+        const status = document.getElementById('promptStatus');
+        status.textContent = '기본값 복원됨';
+        status.className = 'text-green';
+        setTimeout(() => status.textContent = '', 2000);
+      }
+    });
+
+    // --- 응답 테스트 ---
+    const testBtn = document.getElementById('testBtn');
+    const testInput = document.getElementById('testMessage');
+
+    async function sendTest() {
+      const message = testInput.value.trim();
+      if (!message) return;
+      testBtn.disabled = true;
+      document.getElementById('testLoading').style.display = 'block';
+      document.getElementById('testResult').style.display = 'none';
+      try {
+        const res = await fetch('/api/test-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
+        const data = await res.json();
+        document.getElementById('testReply').textContent = data.reply || data.error;
+        document.getElementById('testResult').style.display = 'block';
+      } catch (err) {
+        document.getElementById('testReply').textContent = '에러: ' + err.message;
+        document.getElementById('testResult').style.display = 'block';
+      }
+      document.getElementById('testLoading').style.display = 'none';
+      testBtn.disabled = false;
+    }
+
+    testBtn.addEventListener('click', sendTest);
+    testInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendTest(); });
   </script>
 </body>
 </html>

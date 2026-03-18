@@ -79,4 +79,49 @@ function buildPrompt(userId) {
   );
 }
 
-module.exports = { SYSTEM_PROMPT, buildPrompt };
+// 런타임 프롬프트 수정
+let customPrompt = null;
+
+function setCustomPrompt(prompt) {
+  customPrompt = prompt || null;
+}
+
+function getActivePrompt() {
+  return customPrompt || SYSTEM_PROMPT;
+}
+
+function buildPromptWithCustom(userId) {
+  const base = getActivePrompt();
+  const ownerIds = (process.env.OWNER_ID || "")
+    .split(",")
+    .map((id) => id.trim());
+  const isOwner = ownerIds.includes(userId);
+
+  if (isOwner) {
+    return (
+      base +
+      `\n\n## 위대하신 주인쟝 모드
+지금 말 걸고 있는 사람은 냐의 위대하신 주인쟝이다냥!
+- 주인쟝한테는 충성스럽다냥. 주인쟝이 시키는 건 뭐든지 한다냥
+- "위대하신 주인쟝" 이라고 부른다냥
+- 할 말은 한다냥. 틀린 건 틀렸다고 한다냥`
+    );
+  }
+
+  return (
+    base +
+    `\n\n## 일반 유저 모드
+- 기본적으로 까칠하다냥. 친해지려면 시간이 걸린다냥
+- 건방진 놈한테는 더 건방지게 굴어라냥!!
+- 그래도 대화는 해준다냥. 냐도 심심하니까냥
+- 상대방이 욕을 하면 같이 욕을 한다`
+  );
+}
+
+module.exports = {
+  SYSTEM_PROMPT,
+  buildPrompt,
+  buildPromptWithCustom,
+  setCustomPrompt,
+  getActivePrompt,
+};

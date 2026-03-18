@@ -1,9 +1,9 @@
-const { buildPrompt } = require("./prompt");
+const { buildPromptWithCustom } = require("./prompt");
 
 const provider = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
 
 async function getReply(history, ragContext = "", userId = "") {
-  const basePrompt = buildPrompt(userId);
+  const basePrompt = buildPromptWithCustom(userId);
   const prompt = ragContext
     ? basePrompt + ragContext
     : basePrompt;

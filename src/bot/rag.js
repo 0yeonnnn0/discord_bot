@@ -85,4 +85,20 @@ function formatContext(results) {
   return `\n\n[관련 과거 대화]\n${lines.join("\n\n")}`;
 }
 
-module.exports = { initIndex, storeConversation, searchRelevant, formatContext };
+// RAG 통계
+async function getStats() {
+  try {
+    if (!(await index.isIndexCreated())) {
+      return { vectorCount: 0, indexCreated: false };
+    }
+    const items = await index.listItems();
+    return {
+      vectorCount: items.length,
+      indexCreated: true,
+    };
+  } catch {
+    return { vectorCount: 0, indexCreated: false };
+  }
+}
+
+module.exports = { initIndex, storeConversation, searchRelevant, formatContext, getStats };

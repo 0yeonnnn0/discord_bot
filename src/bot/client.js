@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const { getReply } = require("./ai");
 const history = require("./history");
 const rag = require("./rag");
-const { state, addLog } = require("../shared/state");
+const { state, addLog, trackUser, trackKeywords } = require("../shared/state");
 
 // 채널별 대화 버퍼 (일정량 모이면 벡터 저장)
 const conversationBuffer = new Map();
@@ -31,6 +31,7 @@ client.on("messageCreate", async (message) => {
   });
 
   state.stats.messagesProcessed++;
+  trackKeywords(message.content);
 
   // 대화 버퍼에 추가 (일정량 모이면 벡터 저장)
   if (!conversationBuffer.has(channelId)) {
@@ -51,6 +52,8 @@ client.on("messageCreate", async (message) => {
   const isMentioned = message.mentions.has(client.user);
   const shouldReply =
     isMentioned || Math.random() < state.config.replyChance;
+
+  trackUser(message.author.id, message.author.displayName, shouldReply);
 
   addLog({
     channel: message.channel.name,

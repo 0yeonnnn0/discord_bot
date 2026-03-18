@@ -50,9 +50,19 @@ h1 {
   color: #fff;
 }
 
+h2 {
+  font-size: 1.2rem;
+  margin: 2rem 0 1rem;
+  color: #ccc;
+}
+
+.section {
+  margin-bottom: 2.5rem;
+}
+
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
 }
 
@@ -82,9 +92,10 @@ h1 {
 .hint {
   color: #8888a8;
   font-size: 0.85rem;
-  margin-bottom: 1rem;
+  margin: 0.5rem 0 1rem;
 }
 
+/* 테이블 */
 .table-wrap {
   overflow-x: auto;
 }
@@ -114,25 +125,40 @@ th {
   background: rgba(114, 137, 218, 0.08);
 }
 
+/* 키워드 클라우드 */
+.keyword-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 1rem;
+  background: #16213e;
+  border-radius: 8px;
+  border: 1px solid #2a2a4a;
+}
+
+.keyword {
+  color: #7289da;
+  background: rgba(114, 137, 218, 0.1);
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  cursor: default;
+  transition: background 0.2s;
+}
+
+.keyword:hover {
+  background: rgba(114, 137, 218, 0.2);
+}
+
+/* 폼 */
 .settings-form {
   max-width: 400px;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  font-size: 0.9rem;
-  color: #a0a0b8;
-  margin-bottom: 0.5rem;
 }
 
 .slider-wrap {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 input[type="range"] {
@@ -146,6 +172,7 @@ input[type="range"] {
   min-width: 3rem;
 }
 
+/* 버튼 */
 .btn {
   background: #7289da;
   color: #fff;
@@ -161,7 +188,86 @@ input[type="range"] {
   background: #5b6eae;
 }
 
-#saveStatus {
-  margin-left: 1rem;
-  font-size: 0.9rem;
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #3a3a5a;
+}
+
+.btn-secondary:hover {
+  background: #4a4a6a;
+}
+
+.btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+/* 프롬프트 에디터 */
+textarea {
+  width: 100%;
+  padding: 1rem;
+  background: #16213e;
+  color: #e0e0e0;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #7289da;
+}
+
+/* 응답 테스트 */
+.test-area {
+  max-width: 600px;
+}
+
+.test-input-wrap {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.test-input-wrap input[type="text"] {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: #16213e;
+  color: #e0e0e0;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.test-input-wrap input[type="text"]:focus {
+  outline: none;
+  border-color: #7289da;
+}
+
+.test-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #16213e;
+  border-radius: 8px;
+  border: 1px solid #2a2a4a;
+}
+
+.test-label {
+  font-size: 0.8rem;
+  color: #8888a8;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+#testReply {
+  font-size: 1rem;
+  line-height: 1.5;
 }
