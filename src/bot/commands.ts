@@ -13,37 +13,37 @@ import { getStats as getRagStats } from "./rag";
 // ── Command Definitions ──
 export const commands = [
   new SlashCommandBuilder()
-    .setName("모드")
-    .setDescription("봇 프리셋 관리")
+    .setName("mode")
+    .setDescription("Manage bot presets")
     .addSubcommand(sub =>
-      sub.setName("목록").setDescription("프리셋 목록 보기")
+      sub.setName("list").setDescription("Show all presets")
     )
     .addSubcommand(sub =>
-      sub.setName("변경").setDescription("프리셋 변경")
+      sub.setName("set").setDescription("Change preset")
         .addStringOption(opt =>
-          opt.setName("프리셋").setDescription("변경할 프리셋").setRequired(true).setAutocomplete(true)
+          opt.setName("preset").setDescription("Preset to activate").setRequired(true).setAutocomplete(true)
         )
     )
     .addSubcommand(sub =>
-      sub.setName("현재").setDescription("현재 활성 프리셋 확인")
+      sub.setName("current").setDescription("Show current preset")
     ),
 
   new SlashCommandBuilder()
-    .setName("질문")
-    .setDescription("봇에게 직접 질문하기")
+    .setName("ask")
+    .setDescription("Ask the bot a question")
     .addStringOption(opt =>
-      opt.setName("메시지").setDescription("질문할 내용").setRequired(true)
+      opt.setName("message").setDescription("Your message").setRequired(true)
     ),
 
   new SlashCommandBuilder()
-    .setName("상태")
-    .setDescription("봇 상태 확인"),
+    .setName("status")
+    .setDescription("Show bot status"),
 
   new SlashCommandBuilder()
-    .setName("확률")
-    .setDescription("자동 응답 확률 변경")
+    .setName("chance")
+    .setDescription("Set auto-reply chance")
     .addIntegerOption(opt =>
-      opt.setName("퍼센트").setDescription("0~100 사이 값").setRequired(true).setMinValue(0).setMaxValue(100)
+      opt.setName("percent").setDescription("0~100").setRequired(true).setMinValue(0).setMaxValue(100)
     ),
 ];
 
@@ -66,16 +66,16 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
   const { commandName } = interaction;
 
   switch (commandName) {
-    case "모드":
+    case "mode":
       await handleMode(interaction);
       break;
-    case "질문":
+    case "ask":
       await handleQuestion(interaction);
       break;
-    case "상태":
+    case "status":
       await handleStatus(interaction);
       break;
-    case "확률":
+    case "chance":
       await handleChance(interaction);
       break;
   }
@@ -85,27 +85,27 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
 async function handleMode(interaction: ChatInputCommandInteraction): Promise<void> {
   const sub = interaction.options.getSubcommand();
 
-  if (sub === "목록") {
+  if (sub === "list") {
     const presets = getPresets();
     const list = presets.map(p =>
-      `${p.active ? "▸ " : "　"}**${p.name}**${p.active ? " ← 현재" : ""}\n　　\`/모드 변경 프리셋:${p.id}\``
+      `${p.active ? "▸ " : "　"}**${p.name}**${p.active ? " ← current" : ""}\n　　\`/mode set preset:${p.id}\``
     ).join("\n");
-    await interaction.reply({ content: `**프리셋 목록**\n\n${list}`, ephemeral: true });
+    await interaction.reply({ content: `**Presets**\n\n${list}`, ephemeral: true });
     return;
   }
 
-  if (sub === "현재") {
+  if (sub === "current") {
     const id = getActivePresetId();
     const preset = getPreset(id);
     await interaction.reply({
-      content: `현재 프리셋: **${preset?.name || id}**\n\`${id}\``,
+      content: `Current preset: **${preset?.name || id}**\n\`${id}\``,
       ephemeral: true,
     });
     return;
   }
 
-  if (sub === "변경") {
-    const presetId = interaction.options.getString("프리셋", true);
+  if (sub === "set") {
+    const presetId = interaction.options.getString("preset", true);
     const presets = getPresets();
     const found = presets.find(p => p.id === presetId || p.name.includes(presetId));
 
@@ -121,7 +121,7 @@ async function handleMode(interaction: ChatInputCommandInteraction): Promise<voi
 
 // ── /질문 ──
 async function handleQuestion(interaction: ChatInputCommandInteraction): Promise<void> {
-  const message = interaction.options.getString("메시지", true);
+  const message = interaction.options.getString("message", true);
   await interaction.deferReply();
 
   try {
@@ -168,7 +168,7 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
 
 // ── /확률 ──
 async function handleChance(interaction: ChatInputCommandInteraction): Promise<void> {
-  const percent = interaction.options.getInteger("퍼센트", true);
+  const percent = interaction.options.getInteger("percent", true);
   state.config.replyChance = percent / 100;
   await interaction.reply(`자동 응답 확률 변경: **${percent}%**`);
 }
@@ -177,7 +177,7 @@ async function handleChance(interaction: ChatInputCommandInteraction): Promise<v
 export async function handleAutocomplete(interaction: any): Promise<void> {
   const focused = interaction.options.getFocused(true);
 
-  if (focused.name === "프리셋") {
+  if (focused.name === "preset") {
     const presets = getPresets();
     const filtered = presets.filter(p =>
       p.id.includes(focused.value) || p.name.includes(focused.value)
