@@ -3,7 +3,8 @@ const path = require("path");
 
 const DATA_DIR = path.join(__dirname, "../../data");
 const STATE_FILE = path.join(DATA_DIR, "state.json");
-const MAX_LOGS = 100;
+const MAX_LOGS = 200;
+const MAX_EVENTS = 100;
 const SAVE_INTERVAL = 30000; // 30초마다 저장
 
 // 저장된 데이터 불러오기
@@ -32,6 +33,8 @@ const state = {
     startedAt: Date.now(),
   },
   logs: saved?.logs ?? [],
+  events: saved?.events ?? [],
+  errors: saved?.errors ?? [],
   userStats: saved?.userStats ?? {},
   keywords: saved?.keywords ?? {},
 };
@@ -46,6 +49,8 @@ function saveState() {
       config: state.config,
       stats: { messagesProcessed: state.stats.messagesProcessed, repliesSent: state.stats.repliesSent },
       logs: state.logs,
+      events: state.events,
+      errors: state.errors,
       userStats: state.userStats,
       keywords: state.keywords,
     }));
@@ -69,6 +74,18 @@ function addLog(entry) {
   if (state.logs.length > MAX_LOGS) {
     state.logs.shift();
   }
+}
+
+// 봇 이벤트 로그 (시작, 재시작, 서버 참가/퇴장 등)
+function addEvent(type, detail = '') {
+  state.events.push({ timestamp: Date.now(), type, detail });
+  if (state.events.length > MAX_EVENTS) state.events.shift();
+}
+
+// 에러 로그
+function addError(type, message, detail = '') {
+  state.errors.push({ timestamp: Date.now(), type, message, detail });
+  if (state.errors.length > MAX_EVENTS) state.errors.shift();
 }
 
 function trackUser(userId, displayName, botReplied) {
@@ -120,6 +137,8 @@ function getUserStatsRanked() {
 module.exports = {
   state,
   addLog,
+  addEvent,
+  addError,
   trackUser,
   trackKeywords,
   getTopKeywords,

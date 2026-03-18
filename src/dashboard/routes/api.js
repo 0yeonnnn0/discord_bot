@@ -84,6 +84,16 @@ router.delete("/prompt", (req, res) => {
   res.json({ prompt: getActivePrompt() });
 });
 
+// 이벤트 로그
+router.get("/events", (req, res) => {
+  res.json(state.events.slice().reverse());
+});
+
+// 에러 로그
+router.get("/errors", (req, res) => {
+  res.json(state.errors.slice().reverse());
+});
+
 // 응답 테스트
 router.post("/test-reply", async (req, res) => {
   const { message } = req.body;

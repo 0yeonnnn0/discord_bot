@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { DashboardSkeleton } from '../components/Skeleton'
 
 export default function Dashboard() {
   const [status, setStatus] = useState(null)
@@ -17,7 +18,7 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [])
 
-  if (!status) return <div className="empty"><div className="empty-icon">...</div></div>
+  if (!status) return <DashboardSkeleton />
 
   const uptime = fmt(status.uptime)
   const maxCount = keywords[0]?.count || 1
