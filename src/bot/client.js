@@ -39,9 +39,47 @@ client.on("warn", (msg) => {
   addEvent("discord_warn", msg);
 });
 
+// ── 명령어 처리 ──
+const { getPresets, setActivePreset, getActivePresetId } = require("./prompt");
+
+function handleCommand(message) {
+  const content = message.content.trim();
+  if (!content.startsWith("!모드")) return false;
+
+  const args = content.split(/\s+/).slice(1);
+  const sub = args[0];
+
+  if (!sub || sub === "목록") {
+    const presets = getPresets();
+    const list = presets.map(p =>
+      `${p.active ? "▸ " : "  "}**${p.name}** (\`!모드 ${p.id}\`)${p.active ? " ← 현재" : ""}`
+    ).join("\n");
+    message.reply(`**프리셋 목록**\n${list}`);
+    return true;
+  }
+
+  // ID 또는 이름으로 검색
+  const presets = getPresets();
+  const found = presets.find(p =>
+    p.id === sub || p.name.includes(sub)
+  );
+
+  if (!found) {
+    message.reply(`\`${sub}\` 프리셋을 못 찾겠어. \`!모드 목록\`으로 확인해봐`);
+    return true;
+  }
+
+  setActivePreset(found.id);
+  message.reply(`프리셋 변경: **${found.name}**`);
+  return true;
+}
+
 // ── 메시지 처리 ──
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+
+  // 명령어 처리
+  if (handleCommand(message)) return;
 
   const channelId = message.channel.id;
   const guildName = message.guild?.name || "DM";
