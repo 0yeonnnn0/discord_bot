@@ -267,6 +267,24 @@ export default function Settings() {
                 {models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
+
+            <div className="model-info-grid">
+              <div className="model-info-item">
+                <span className="model-info-label">Chat</span>
+                <span className="model-info-value mono">{model}</span>
+                <span className="model-info-badge">변경 가능</span>
+              </div>
+              <div className="model-info-item">
+                <span className="model-info-label">Image</span>
+                <span className="model-info-value mono">gemini-2.5-flash-image</span>
+                <span className="model-info-badge fixed">고정</span>
+              </div>
+              <div className="model-info-item">
+                <span className="model-info-label">Embedding</span>
+                <span className="model-info-value mono">gemini-embedding-001</span>
+                <span className="model-info-badge fixed">고정</span>
+              </div>
+            </div>
           </div>
 
           {/* Reply Chance */}
