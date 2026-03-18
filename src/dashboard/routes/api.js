@@ -1,7 +1,10 @@
 const { Router } = require("express");
 const { client } = require("../../bot/client");
 const { state, getTopKeywords, getUserStatsRanked } = require("../../shared/state");
-const { getActivePrompt, setCustomPrompt } = require("../../bot/prompt");
+const {
+  getPresets, getPreset, getActivePresetId, setActivePreset,
+  upsertPreset, deletePreset, getActivePrompt,
+} = require("../../bot/prompt");
 const { getStats: getRagStats } = require("../../bot/rag");
 const { getReply } = require("../../bot/ai");
 const { getQueueStats } = require("../../bot/queue");
@@ -47,68 +50,63 @@ router.put("/config", (req, res) => {
 router.get("/logs", (req, res) => {
   let logs = state.logs;
   const { channel, limit } = req.query;
-  if (channel) {
-    logs = logs.filter((l) => l.channel === channel);
-  }
-  if (limit) {
-    logs = logs.slice(-parseInt(limit));
-  }
+  if (channel) logs = logs.filter((l) => l.channel === channel);
+  if (limit) logs = logs.slice(-parseInt(limit));
   res.json(logs);
 });
 
-// 유저별 통계
-router.get("/user-stats", (req, res) => {
-  res.json(getUserStatsRanked());
+router.get("/user-stats", (req, res) => res.json(getUserStatsRanked()));
+router.get("/keywords", (req, res) => res.json(getTopKeywords(parseInt(req.query.limit) || 20)));
+router.get("/rag-stats", async (req, res) => res.json(await getRagStats()));
+router.get("/events", (req, res) => res.json(state.events.slice().reverse()));
+router.get("/errors", (req, res) => res.json(state.errors.slice().reverse()));
+
+// ── 프리셋 API ──
+router.get("/presets", (req, res) => {
+  res.json({ presets: getPresets(), activeId: getActivePresetId() });
 });
 
-// 인기 키워드
-router.get("/keywords", (req, res) => {
-  const limit = parseInt(req.query.limit) || 20;
-  res.json(getTopKeywords(limit));
+router.get("/presets/:id", (req, res) => {
+  const preset = getPreset(req.params.id);
+  if (!preset) return res.status(404).json({ error: "프리셋 없음" });
+  res.json({ id: req.params.id, ...preset });
 });
 
-// RAG 통계
-router.get("/rag-stats", async (req, res) => {
-  const stats = await getRagStats();
-  res.json(stats);
-});
-
-// 시스템 프롬프트
-router.get("/prompt", (req, res) => {
-  res.json({ prompt: getActivePrompt() });
-});
-
-router.put("/prompt", (req, res) => {
-  const { prompt } = req.body;
-  if (typeof prompt !== "string") {
-    return res.status(400).json({ error: "prompt는 문자열이어야 합니다" });
+router.put("/presets/:id/activate", (req, res) => {
+  if (!setActivePreset(req.params.id)) {
+    return res.status(404).json({ error: "프리셋 없음" });
   }
-  setCustomPrompt(prompt.trim() || null);
-  res.json({ prompt: getActivePrompt() });
+  res.json({ activeId: req.params.id });
 });
 
-// 프롬프트 초기화
-router.delete("/prompt", (req, res) => {
-  setCustomPrompt(null);
-  res.json({ prompt: getActivePrompt() });
+router.put("/presets/:id", (req, res) => {
+  upsertPreset(req.params.id, req.body);
+  res.json({ id: req.params.id, ...getPreset(req.params.id) });
 });
 
-// 이벤트 로그
-router.get("/events", (req, res) => {
-  res.json(state.events.slice().reverse());
+router.post("/presets", (req, res) => {
+  const id = req.body.id || `custom_${Date.now()}`;
+  upsertPreset(id, req.body);
+  res.json({ id, ...getPreset(id) });
 });
 
-// 에러 로그
-router.get("/errors", (req, res) => {
-  res.json(state.errors.slice().reverse());
+router.delete("/presets/:id", (req, res) => {
+  if (!deletePreset(req.params.id)) {
+    return res.status(400).json({ error: "기본 프리셋은 삭제할 수 없습니다" });
+  }
+  res.json({ ok: true });
+});
+
+// 하위 호환: 기존 prompt API는 활성 프리셋의 프롬프트를 반환
+router.get("/prompt", (req, res) => {
+  const preset = getPreset(getActivePresetId());
+  res.json({ prompt: preset?.prompt || "", presetId: getActivePresetId() });
 });
 
 // 응답 테스트
 router.post("/test-reply", async (req, res) => {
   const { message } = req.body;
-  if (!message) {
-    return res.status(400).json({ error: "message가 필요합니다" });
-  }
+  if (!message) return res.status(400).json({ error: "message가 필요합니다" });
   try {
     const history = [{ role: "user", content: `테스터: ${message}` }];
     const reply = await getReply(history, "", process.env.OWNER_ID || "");
