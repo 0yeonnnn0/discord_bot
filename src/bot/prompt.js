@@ -79,11 +79,34 @@ function buildPrompt(userId) {
   );
 }
 
-// 런타임 프롬프트 수정
+const fs = require("fs");
+const path = require("path");
+const PROMPT_FILE = path.join(__dirname, "../../data/custom-prompt.txt");
+
+// 저장된 커스텀 프롬프트 불러오기
 let customPrompt = null;
+try {
+  if (fs.existsSync(PROMPT_FILE)) {
+    customPrompt = fs.readFileSync(PROMPT_FILE, "utf-8");
+    console.log("저장된 커스텀 프롬프트 복원 완료");
+  }
+} catch (err) {
+  console.error("프롬프트 복원 실패:", err.message);
+}
 
 function setCustomPrompt(prompt) {
   customPrompt = prompt || null;
+  try {
+    const dir = path.dirname(PROMPT_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (customPrompt) {
+      fs.writeFileSync(PROMPT_FILE, customPrompt);
+    } else if (fs.existsSync(PROMPT_FILE)) {
+      fs.unlinkSync(PROMPT_FILE);
+    }
+  } catch (err) {
+    console.error("프롬프트 저장 실패:", err.message);
+  }
 }
 
 function getActivePrompt() {

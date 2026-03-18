@@ -1,20 +1,65 @@
+const fs = require("fs");
+const path = require("path");
+
+const DATA_DIR = path.join(__dirname, "../../data");
+const STATE_FILE = path.join(DATA_DIR, "state.json");
 const MAX_LOGS = 100;
+const SAVE_INTERVAL = 30000; // 30초마다 저장
+
+// 저장된 데이터 불러오기
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+      console.log("저장된 상태 복원 완료");
+      return data;
+    }
+  } catch (err) {
+    console.error("상태 복원 실패:", err.message);
+  }
+  return null;
+}
+
+const saved = loadState();
 
 const state = {
   config: {
-    replyChance: parseFloat(process.env.REPLY_CHANCE) || 0.08,
+    replyChance: saved?.config?.replyChance ?? (parseFloat(process.env.REPLY_CHANCE) || 0.08),
   },
   stats: {
-    messagesProcessed: 0,
-    repliesSent: 0,
+    messagesProcessed: saved?.stats?.messagesProcessed ?? 0,
+    repliesSent: saved?.stats?.repliesSent ?? 0,
     startedAt: Date.now(),
   },
-  logs: [],
-  // 유저별 통계
-  userStats: {},
-  // 키워드 카운트
-  keywords: {},
+  logs: saved?.logs ?? [],
+  userStats: saved?.userStats ?? {},
+  keywords: saved?.keywords ?? {},
 };
+
+// 디스크에 저장
+function saveState() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(STATE_FILE, JSON.stringify({
+      config: state.config,
+      stats: { messagesProcessed: state.stats.messagesProcessed, repliesSent: state.stats.repliesSent },
+      logs: state.logs,
+      userStats: state.userStats,
+      keywords: state.keywords,
+    }));
+  } catch (err) {
+    console.error("상태 저장 실패:", err.message);
+  }
+}
+
+// 주기적 저장
+setInterval(saveState, SAVE_INTERVAL);
+
+// 프로세스 종료 시 저장
+process.on("SIGTERM", () => { saveState(); process.exit(0); });
+process.on("SIGINT", () => { saveState(); process.exit(0); });
 
 function addLog(entry) {
   state.logs.push({
@@ -26,7 +71,6 @@ function addLog(entry) {
   }
 }
 
-// 유저 통계 업데이트
 function trackUser(userId, displayName, botReplied) {
   if (!state.userStats[userId]) {
     state.userStats[userId] = {
@@ -41,7 +85,6 @@ function trackUser(userId, displayName, botReplied) {
   if (botReplied) user.gotReplies++;
 }
 
-// 키워드 추출 및 카운트
 const STOP_WORDS = new Set([
   "이", "그", "저", "것", "수", "등", "더", "좀", "잘", "못",
   "안", "걍", "ㅋㅋ", "ㅎㅎ", "ㅇㅇ", "ㄴㄴ", "ㄹㅇ", "the",
@@ -61,7 +104,6 @@ function trackKeywords(content) {
   }
 }
 
-// 인기 키워드 상위 N개
 function getTopKeywords(n = 20) {
   return Object.entries(state.keywords)
     .sort((a, b) => b[1] - a[1])
@@ -69,7 +111,6 @@ function getTopKeywords(n = 20) {
     .map(([word, count]) => ({ word, count }));
 }
 
-// 유저 통계 정렬
 function getUserStatsRanked() {
   return Object.entries(state.userStats)
     .map(([id, data]) => ({ id, ...data }))
@@ -83,4 +124,5 @@ module.exports = {
   trackKeywords,
   getTopKeywords,
   getUserStatsRanked,
+  saveState,
 };
