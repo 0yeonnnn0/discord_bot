@@ -1,9 +1,30 @@
+const fs = require("fs");
 const path = require("path");
 const { LocalIndex } = require("vectra");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const DATA_DIR = path.join(__dirname, "../../data/vectors");
+const HITS_FILE = path.join(__dirname, "../../data/rag-hits.json");
 const index = new LocalIndex(DATA_DIR);
+
+// 히트 카운트 관리
+let hitCounts = {};
+try {
+  if (fs.existsSync(HITS_FILE)) {
+    hitCounts = JSON.parse(fs.readFileSync(HITS_FILE, "utf-8"));
+  }
+} catch {}
+
+function saveHits() {
+  try {
+    const dir = path.dirname(HITS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(HITS_FILE, JSON.stringify(hitCounts));
+  } catch {}
+}
+
+// 30초마다 저장
+setInterval(saveHits, 30000);
 
 let genAI = null;
 
@@ -59,14 +80,23 @@ async function searchRelevant(query, topK = 3) {
     const results = await index.queryItems(vector, topK);
 
     // 유사도 0.5 이상만
-    return results
-      .filter((r) => r.score > 0.5)
-      .map((r) => ({
-        text: r.item.metadata.text,
-        channel: r.item.metadata.channel,
-        timestamp: r.item.metadata.timestamp,
-        score: r.score,
-      }));
+    const filtered = results.filter((r) => r.score > 0.5);
+
+    // 히트 카운트 기록
+    for (const r of filtered) {
+      const id = r.item.id || String(r.item.metadata.timestamp);
+      if (!hitCounts[id]) hitCounts[id] = { count: 0, lastHit: 0, timestamp: r.item.metadata.timestamp };
+      hitCounts[id].count++;
+      hitCounts[id].lastHit = Date.now();
+    }
+
+    return filtered.map((r) => ({
+      id: r.item.id,
+      text: r.item.metadata.text,
+      channel: r.item.metadata.channel,
+      timestamp: r.item.metadata.timestamp,
+      score: r.score,
+    }));
   } catch (err) {
     console.error("벡터 검색 실패:", err.message);
     return [];
@@ -112,6 +142,8 @@ async function listVectors() {
       timestamp: item.metadata.timestamp,
       text: item.metadata.text,
       messageCount: item.metadata.messageCount,
+      hits: hitCounts[item.id]?.count || 0,
+      lastHit: hitCounts[item.id]?.lastHit || null,
     }));
   } catch {
     return [];

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, ComposedChart } from 'recharts'
 
 const MODEL_OPTIONS = {
   google: [
@@ -26,6 +27,7 @@ export default function Settings() {
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState(null)
   const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
+  const [timeline, setTimeline] = useState([])
   const [ragView, setRagView] = useState(null)
   const [vectors, setVectors] = useState([])
   const [ragQuery, setRagQuery] = useState('')
@@ -53,6 +55,7 @@ export default function Settings() {
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
+    fetch('/api/rag/timeline').then(r => r.json()).then(setTimeline)
   }, [])
 
   useEffect(() => {
@@ -304,6 +307,75 @@ export default function Settings() {
                 <div className="card-value mono" style={{ color: 'var(--text-secondary)', fontSize: '0.93rem' }}>5 messages</div>
               </div>
             </div>
+
+            {/* Timeline Chart */}
+            {timeline.length > 0 && (
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)' }}>
+                <div className="card-label" style={{ marginBottom: 'var(--space-4)' }}>Timeline</div>
+                <div style={{ width: '100%', height: 180 }}>
+                  <ResponsiveContainer>
+                    <ComposedChart data={timeline} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                      <defs>
+                        <linearGradient id="gradStored" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#5865f2" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#5865f2" stopOpacity={0.02} />
+                        </linearGradient>
+                        <linearGradient id="gradHits" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.6} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }}
+                        tickFormatter={d => d.slice(5)}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--border-default)',
+                          borderRadius: 8,
+                          fontSize: 12,
+                          color: 'var(--text-primary)',
+                        }}
+                        labelFormatter={d => d}
+                        formatter={(value, name) => [value, name === 'stored' ? 'Vectors' : 'Hits']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="stored"
+                        stroke="#5865f2"
+                        strokeWidth={2}
+                        fill="url(#gradStored)"
+                      />
+                      <Bar
+                        dataKey="hits"
+                        fill="url(#gradHits)"
+                        radius={[3, 3, 0, 0]}
+                        barSize={8}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-3)' }}>
+                  <span className="hint" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 10, height: 3, background: '#5865f2', borderRadius: 2, display: 'inline-block' }} />
+                    Vectors stored
+                  </span>
+                  <span className="hint" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 8, height: 8, background: 'rgba(34,197,94,0.5)', borderRadius: 2, display: 'inline-block' }} />
+                    Hit count
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* RAG Search */}
             <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)' }}>

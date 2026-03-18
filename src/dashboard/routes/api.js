@@ -124,6 +124,21 @@ router.get("/rag/vectors", async (req, res) => {
   res.json(vectors);
 });
 
+// ── RAG: 타임라인 데이터 ──
+router.get("/rag/timeline", async (req, res) => {
+  const vectors = await listVectors();
+  // 날짜별 그룹핑
+  const byDate = {};
+  for (const v of vectors) {
+    const date = new Date(v.timestamp).toISOString().split("T")[0];
+    if (!byDate[date]) byDate[date] = { date, stored: 0, hits: 0 };
+    byDate[date].stored++;
+    byDate[date].hits += v.hits;
+  }
+  const timeline = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+  res.json(timeline);
+});
+
 // ── RAG: 검색 테스트 ──
 router.post("/rag/search", async (req, res) => {
   const { query } = req.body;
