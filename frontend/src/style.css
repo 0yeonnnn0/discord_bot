@@ -452,6 +452,25 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.12);
 }
 
+/* Model select */
+.model-select {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.87rem;
+  transition: border-color var(--transition-fast);
+  cursor: pointer;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.12);
+}
+
 /* Slider */
 .slider-row {
   display: flex;

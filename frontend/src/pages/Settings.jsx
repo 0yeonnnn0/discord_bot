@@ -1,8 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
+const MODEL_OPTIONS = {
+  google: [
+    { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (Preview)' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  ],
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+  ],
+}
+
 export default function Settings() {
   const [chance, setChance] = useState(8)
+  const [provider, setProvider] = useState('google')
+  const [model, setModel] = useState('')
   const [prompt, setPrompt] = useState('')
   const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
   const [messages, setMessages] = useState([])
@@ -11,7 +30,11 @@ export default function Settings() {
   const chatEndRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/config').then(r => r.json()).then(d => setChance(Math.round(d.replyChance * 100)))
+    fetch('/api/config').then(r => r.json()).then(d => {
+      setChance(Math.round(d.replyChance * 100))
+      setProvider(d.aiProvider || 'google')
+      setModel(d.model || '')
+    })
     fetch('/api/prompt').then(r => r.json()).then(d => setPrompt(d.prompt))
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
   }, [])
@@ -27,6 +50,15 @@ export default function Settings() {
       body: JSON.stringify({ replyChance: chance / 100 }),
     })
     res.ok ? toast.success(`응답 확률 ${chance}%로 저장`) : toast.error('저장 실패')
+  }
+
+  const saveModel = async () => {
+    const res = await fetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aiProvider: provider, model }),
+    })
+    res.ok ? toast.success(`모델 변경: ${model}`) : toast.error('저장 실패')
   }
 
   const savePrompt = async () => {
@@ -68,6 +100,8 @@ export default function Settings() {
     setLoading(false)
   }
 
+  const models = MODEL_OPTIONS[provider] || []
+
   return (
     <div className="stagger">
       <div className="page-header">
@@ -76,8 +110,41 @@ export default function Settings() {
       </div>
 
       <div className="command-center">
-        {/* ── Left Column: Config ── */}
+        {/* Left Column */}
         <div className="stagger">
+          {/* AI Model */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">AI Model</span>
+              <button className="btn btn-primary" onClick={saveModel}>Save</button>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+              <select
+                value={provider}
+                onChange={e => {
+                  setProvider(e.target.value)
+                  setModel(MODEL_OPTIONS[e.target.value]?.[0]?.value || '')
+                }}
+                className="model-select"
+              >
+                <option value="google">Google Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+              <select
+                value={model}
+                onChange={e => setModel(e.target.value)}
+                className="model-select"
+                style={{ flex: 1 }}
+              >
+                {models.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <p className="form-hint">변경 즉시 반영. 재시작 후에도 유지됩니다.</p>
+          </div>
+
           {/* Reply Chance */}
           <div className="panel">
             <div className="panel-header">
@@ -130,7 +197,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* ── Right Column: Live Test ── */}
+        {/* Right Column: Live Test */}
         <div className="test-panel">
           <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="panel-header">

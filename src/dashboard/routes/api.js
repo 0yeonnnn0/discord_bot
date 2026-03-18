@@ -24,13 +24,22 @@ router.get("/config", (req, res) => {
 });
 
 router.put("/config", (req, res) => {
-  const { replyChance } = req.body;
+  const { replyChance, aiProvider, model } = req.body;
   if (replyChance !== undefined) {
     const value = parseFloat(replyChance);
     if (isNaN(value) || value < 0 || value > 1) {
       return res.status(400).json({ error: "replyChance는 0~1 사이 값이어야 합니다" });
     }
     state.config.replyChance = value;
+  }
+  if (aiProvider !== undefined) {
+    if (!["google", "openai", "anthropic"].includes(aiProvider)) {
+      return res.status(400).json({ error: "잘못된 aiProvider" });
+    }
+    state.config.aiProvider = aiProvider;
+  }
+  if (model !== undefined) {
+    state.config.model = model;
   }
   res.json(state.config);
 });

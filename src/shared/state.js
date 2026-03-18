@@ -26,6 +26,8 @@ const saved = loadState();
 const state = {
   config: {
     replyChance: saved?.config?.replyChance ?? (parseFloat(process.env.REPLY_CHANCE) || 0.08),
+    aiProvider: saved?.config?.aiProvider ?? (process.env.AI_PROVIDER || "google"),
+    model: saved?.config?.model ?? (process.env.GOOGLE_MODEL || process.env.ANTHROPIC_MODEL || process.env.OPENAI_MODEL || "gemini-2.5-flash-lite"),
   },
   stats: {
     messagesProcessed: saved?.stats?.messagesProcessed ?? 0,

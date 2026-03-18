@@ -1,6 +1,5 @@
 const { buildPromptWithCustom } = require("./prompt");
-
-const provider = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
+const { state } = require("../shared/state");
 
 async function getReply(history, ragContext = "", userId = "") {
   const basePrompt = buildPromptWithCustom(userId);
@@ -8,24 +7,27 @@ async function getReply(history, ragContext = "", userId = "") {
     ? basePrompt + ragContext
     : basePrompt;
 
+  const provider = state.config.aiProvider;
+  const model = state.config.model;
+
   switch (provider) {
     case "anthropic":
-      return getAnthropicReply(history, prompt);
+      return getAnthropicReply(history, prompt, model);
     case "openai":
-      return getOpenAIReply(history, prompt);
+      return getOpenAIReply(history, prompt, model);
     case "google":
-      return getGoogleReply(history, prompt);
+      return getGoogleReply(history, prompt, model);
     default:
       throw new Error(`지원하지 않는 AI_PROVIDER: ${provider}`);
   }
 }
 
 // --- Anthropic Claude ---
-async function getAnthropicReply(history, prompt) {
+async function getAnthropicReply(history, prompt, model) {
   const Anthropic = require("@anthropic-ai/sdk");
   const client = new Anthropic();
   const response = await client.messages.create({
-    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     max_tokens: 512,
     system: prompt,
     messages: history,
@@ -34,7 +36,7 @@ async function getAnthropicReply(history, prompt) {
 }
 
 // --- OpenAI GPT ---
-async function getOpenAIReply(history, prompt) {
+async function getOpenAIReply(history, prompt, model) {
   const OpenAI = require("openai");
   const client = new OpenAI();
   const messages = [
@@ -42,7 +44,7 @@ async function getOpenAIReply(history, prompt) {
     ...history,
   ];
   const response = await client.chat.completions.create({
-    model: process.env.OPENAI_MODEL || "gpt-4o",
+    model: model || "gpt-4o",
     max_tokens: 512,
     messages,
   });
@@ -50,11 +52,11 @@ async function getOpenAIReply(history, prompt) {
 }
 
 // --- Google Gemini ---
-async function getGoogleReply(history, prompt) {
+async function getGoogleReply(history, prompt, model) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: process.env.GOOGLE_MODEL || "gemini-2.0-flash",
+  const m = genAI.getGenerativeModel({
+    model: model || "gemini-2.5-flash-lite",
     systemInstruction: prompt,
   });
 
@@ -63,10 +65,10 @@ async function getGoogleReply(history, prompt) {
     parts: [{ text: msg.content }],
   }));
 
-  const result = await model.generateContent({ contents });
+  const result = await m.generateContent({ contents });
   return result.response.text();
 }
 
-console.log(`AI 프로바이더: ${provider}`);
+console.log(`AI: ${state.config.aiProvider} / ${state.config.model}`);
 
 module.exports = { getReply };
