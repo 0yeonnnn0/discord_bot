@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Toaster } from '../components/ui/sonner'
 
-export default function Login({ onSuccess }) {
+export default function Login({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState('')
   const [shaking, setShaking] = useState(false)
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const res = await fetch('/api/login', {
       method: 'POST',

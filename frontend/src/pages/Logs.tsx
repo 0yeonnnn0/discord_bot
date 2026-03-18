@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table'
+import type { LogEntry, EventEntry, ErrorEntry } from '../types'
 
 export default function Logs() {
-  const [logs, setLogs] = useState([])
-  const [events, setEvents] = useState([])
-  const [errors, setErrors] = useState([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [events, setEvents] = useState<EventEntry[]>([])
+  const [errors, setErrors] = useState<ErrorEntry[]>([])
   const [filter, setFilter] = useState('')
   const [tab, setTab] = useState('messages')
 
@@ -183,7 +184,7 @@ export default function Logs() {
   )
 }
 
-function getSpeedColor(ms) {
+function getSpeedColor(ms: number | null) {
   if (!ms) return 'var(--text-tertiary)'
   if (ms < 2000) return 'var(--green)'
   if (ms < 5000) return 'var(--amber)'
