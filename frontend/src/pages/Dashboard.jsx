@@ -17,97 +17,105 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [])
 
-  if (!status) return <div className="empty"><div className="empty-icon">...</div>Loading</div>
+  if (!status) return <div className="empty"><div className="empty-icon">...</div></div>
 
-  const uptime = formatUptime(status.uptime)
+  const uptime = fmt(status.uptime)
   const maxCount = keywords[0]?.count || 1
 
   return (
     <div className="stagger">
-      <div>
+      <div className="page-header">
         <h1>Overview</h1>
-        <p className="page-desc">봇 상태 및 서버 활동을 모니터링합니다</p>
+        <p className="page-desc">봇 상태와 서버 활동을 모니터링합니다</p>
       </div>
 
       <div className="card-grid stagger">
-        <StatCard label="Status" className={status.online ? 'text-green' : 'text-red'}>
+        <div className="card">
+          <div className="card-label">Status</div>
           <div className={`status-indicator ${status.online ? 'online' : 'offline'}`}>
             <span className="dot" />
             {status.online ? 'Online' : 'Offline'}
           </div>
-        </StatCard>
-        <StatCard label="Uptime" value={uptime} />
-        <StatCard label="Messages" value={status.stats.messagesProcessed.toLocaleString()} />
-        <StatCard label="Replies" value={status.stats.repliesSent.toLocaleString()} />
-        <StatCard label="Reply Rate" value={`${Math.round(status.config.replyChance * 100)}%`} className="text-accent" />
+        </div>
+        <div className="card">
+          <div className="card-label">Uptime</div>
+          <div className="card-value">{uptime}</div>
+        </div>
+        <div className="card">
+          <div className="card-label">Messages</div>
+          <div className="card-value">{status.stats.messagesProcessed.toLocaleString()}</div>
+        </div>
+        <div className="card">
+          <div className="card-label">Bot Replies</div>
+          <div className="card-value text-accent">{status.stats.repliesSent.toLocaleString()}</div>
+        </div>
+        <div className="card">
+          <div className="card-label">Reply Rate</div>
+          <div className="card-value">{Math.round(status.config.replyChance * 100)}%</div>
+        </div>
       </div>
 
-      <h2>Users</h2>
-      {userStats.length === 0 ? (
-        <div className="empty">아직 데이터가 없습니다</div>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>User</th>
-                <th>Messages</th>
-                <th>Bot Replies</th>
-                <th>Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {userStats.map((u, i) => (
-                <tr key={u.id}>
-                  <td className="mono" style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                  <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{u.displayName}</td>
-                  <td className="mono">{u.messages}</td>
-                  <td className="mono">{u.gotReplies}</td>
-                  <td className="mono text-accent">
-                    {u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%
-                  </td>
+      <div className="section-gap">
+        <h2>Users</h2>
+        {userStats.length === 0 ? (
+          <div className="empty">아직 데이터가 없습니다</div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 50 }}>#</th>
+                  <th>User</th>
+                  <th style={{ width: 110 }}>Messages</th>
+                  <th style={{ width: 110 }}>Replies</th>
+                  <th style={{ width: 90 }}>Rate</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {userStats.map((u, i) => (
+                  <tr key={u.id}>
+                    <td className="mono" style={{ color: 'var(--text-tertiary)' }}>{i + 1}</td>
+                    <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{u.displayName}</td>
+                    <td className="mono">{u.messages}</td>
+                    <td className="mono">{u.gotReplies}</td>
+                    <td className="mono text-accent">{u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-      <h2>Trending Keywords</h2>
-      {keywords.length === 0 ? (
-        <div className="empty">아직 데이터가 없습니다</div>
-      ) : (
-        <div className="keyword-cloud">
-          {keywords.map(kw => (
-            <span
-              key={kw.word}
-              className="keyword"
-              style={{ fontSize: `${0.75 + (kw.count / maxCount) * 0.5}rem` }}
-              title={`${kw.count}회`}
-            >
-              {kw.word}
-              <span style={{ opacity: 0.5, marginLeft: 4, fontSize: '0.7rem' }}>{kw.count}</span>
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="section-gap">
+        <h2>Trending Keywords</h2>
+        {keywords.length === 0 ? (
+          <div className="empty">아직 데이터가 없습니다</div>
+        ) : (
+          <div className="keyword-cloud">
+            {keywords.map(kw => (
+              <span
+                key={kw.word}
+                className="keyword"
+                style={{ fontSize: `${0.75 + (kw.count / maxCount) * 0.45}rem` }}
+                title={`${kw.count}회`}
+              >
+                {kw.word}
+                <span style={{ opacity: 0.45, marginLeft: 5, fontSize: '0.65rem' }}>{kw.count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function StatCard({ label, value, children, className = '' }) {
-  return (
-    <div className="card">
-      <div className="card-label">{label}</div>
-      {children || <div className={`card-value ${className}`}>{value}</div>}
-    </div>
-  )
-}
-
-function formatUptime(ms) {
-  const h = Math.floor(ms / 3600000)
+function fmt(ms) {
+  const d = Math.floor(ms / 86400000)
+  const h = Math.floor((ms % 86400000) / 3600000)
   const m = Math.floor((ms % 3600000) / 60000)
+  if (d > 0) return `${d}d ${h}h`
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
 }
