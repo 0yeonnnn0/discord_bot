@@ -116,8 +116,18 @@ client.on("messageCreate", async (message) => {
     }
   } catch (err) {
     clearTimeout(queueDelay);
-    if (waitingMsg) await waitingMsg.delete().catch(() => {});
     console.error("응답 생성 실패:", err.message);
+
+    const isRateLimit = err.message?.includes("429") || err.message?.includes("quota");
+    const errorMsg = isRateLimit
+      ? "오늘은 너무 많이 떠들었다냥... 내일 다시 돌아온다냥! >w<"
+      : "뭔가 고장났다냥... @д@";
+
+    if (waitingMsg) {
+      await waitingMsg.edit(errorMsg).catch(() => {});
+    } else {
+      await message.reply(errorMsg).catch(() => {});
+    }
   }
 });
 
