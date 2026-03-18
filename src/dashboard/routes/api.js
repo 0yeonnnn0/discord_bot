@@ -4,6 +4,7 @@ const { state, getTopKeywords, getUserStatsRanked } = require("../../shared/stat
 const { getActivePrompt, setCustomPrompt } = require("../../bot/prompt");
 const { getStats: getRagStats } = require("../../bot/rag");
 const { getReply } = require("../../bot/ai");
+const { getQueueStats } = require("../../bot/queue");
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.get("/status", (req, res) => {
     uptime: Date.now() - state.stats.startedAt,
     guilds: client.guilds?.cache.size || 0,
     stats: state.stats,
+    queue: getQueueStats(),
     config: state.config,
   });
 });

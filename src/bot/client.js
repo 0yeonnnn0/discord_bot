@@ -3,6 +3,7 @@ const { getReply } = require("./ai");
 const history = require("./history");
 const rag = require("./rag");
 const { state, addLog, trackUser, trackKeywords } = require("../shared/state");
+const { enqueue, canUserRequest, markUserRequest } = require("./queue");
 
 // 채널별 대화 버퍼 (일정량 모이면 벡터 저장)
 const conversationBuffer = new Map();
@@ -65,14 +66,22 @@ client.on("messageCreate", async (message) => {
 
   if (!shouldReply) return;
 
+  // 유저 쿨다운 체크 (멘션은 쿨다운 무시)
+  if (!isMentioned && !canUserRequest(message.author.id)) return;
+
+  markUserRequest(message.author.id);
+
+  // 큐에 넣어서 동시 호출 수 제한
   try {
-    const channelHistory = history.getHistory(channelId);
+    const reply = await enqueue(async () => {
+      const channelHistory = history.getHistory(channelId);
+      const ragResults = await rag.searchRelevant(message.content);
+      const ragContext = rag.formatContext(ragResults);
+      return getReply(channelHistory, ragContext, message.author.id);
+    });
 
-    // RAG: 관련 과거 대화 검색
-    const ragResults = await rag.searchRelevant(message.content);
-    const ragContext = rag.formatContext(ragResults);
-
-    const reply = await getReply(channelHistory, ragContext, message.author.id);
+    // null이면 큐 타임아웃으로 스킵된 것
+    if (!reply) return;
 
     await message.reply(reply);
 
@@ -83,7 +92,6 @@ client.on("messageCreate", async (message) => {
 
     state.stats.repliesSent++;
 
-    // 로그에 봇 답변 기록
     const lastLog = state.logs[state.logs.length - 1];
     if (lastLog) {
       lastLog.botReply = reply;
