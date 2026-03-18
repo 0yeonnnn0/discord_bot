@@ -1,10 +1,11 @@
-import { Client, GatewayIntentBits, Message } from "discord.js";
+import { Client, GatewayIntentBits, Message, ChatInputCommandInteraction } from "discord.js";
 import { getReply } from "./ai";
 import * as history from "./history";
 import * as rag from "./rag";
 import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
 import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
+import { registerCommands, handleInteraction, handleAutocomplete } from "./commands";
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
@@ -18,9 +19,24 @@ export const client = new Client({
 });
 
 // ── Events ──
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`봇 로그인 완료: ${client.user!.tag}`);
   addEvent("bot_ready", `${client.user!.tag} — ${client.guilds.cache.size}개 서버`);
+
+  // 슬래시 커맨드 등록
+  await registerCommands(client.user!.id, process.env.DISCORD_TOKEN || "");
+});
+
+// 슬래시 커맨드 핸들러
+client.on("interactionCreate", async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    await handleAutocomplete(interaction);
+    return;
+  }
+  if (interaction.isChatInputCommand()) {
+    await handleInteraction(interaction as ChatInputCommandInteraction);
+    return;
+  }
 });
 
 client.on("guildCreate", (guild) => addEvent("guild_join", `${guild.name} (${guild.memberCount}명)`));
