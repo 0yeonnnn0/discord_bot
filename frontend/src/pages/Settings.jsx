@@ -261,7 +261,7 @@ export default function Settings() {
                 <span className="panel-title">
                   Editing: {editingPreset.name}
                 </span>
-                {!['neko', 'mimic', 'chill'].includes(editingPreset.id) && (
+                {editingPreset && (
                   <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: '0.75rem', color: 'var(--red)' }}
                     onClick={() => deletePreset(editingPreset.id)}>
                     Delete

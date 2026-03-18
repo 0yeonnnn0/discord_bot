@@ -92,7 +92,7 @@ router.post("/presets", (req, res) => {
 
 router.delete("/presets/:id", (req, res) => {
   if (!deletePreset(req.params.id)) {
-    return res.status(400).json({ error: "기본 프리셋은 삭제할 수 없습니다" });
+    return res.status(400).json({ error: "프리셋을 찾을 수 없습니다" });
   }
   res.json({ ok: true });
 });
