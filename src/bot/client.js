@@ -46,13 +46,16 @@ client.on("messageCreate", async (message) => {
   const channelId = message.channel.id;
   const guildName = message.guild?.name || "DM";
 
+  // 봇 멘션 ID 제거 (<@123456789> 형태)
+  const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
+
   history.addMessage(channelId, {
     role: "user",
-    content: `${message.author.displayName}: ${message.content}`,
+    content: `${message.author.displayName}: ${cleanContent}`,
   });
 
   state.stats.messagesProcessed++;
-  trackKeywords(message.content);
+  trackKeywords(cleanContent);
 
   // 대화 버퍼에 추가 (일정량 모이면 벡터 저장)
   if (!conversationBuffer.has(channelId)) {
@@ -60,7 +63,7 @@ client.on("messageCreate", async (message) => {
   }
   const buffer = conversationBuffer.get(channelId);
   buffer.push({
-    content: `${message.author.displayName}: ${message.content}`,
+    content: `${message.author.displayName}: ${cleanContent}`,
   });
   if (buffer.length >= BUFFER_SIZE) {
     rag.storeConversation({
@@ -82,7 +85,7 @@ client.on("messageCreate", async (message) => {
     guild: guildName,
     channel: message.channel.name,
     author: message.author.displayName,
-    content: message.content,
+    content: cleanContent,
     botReplied: shouldReply,
     triggerReason,
     botReply: null,

@@ -100,17 +100,18 @@ export default function Dashboard() {
         {keywords.length === 0 ? (
           <div className="empty">아직 데이터가 없습니다</div>
         ) : (
-          <div className="keyword-cloud">
-            {keywords.map(kw => (
-              <span
-                key={kw.word}
-                className="keyword"
-                style={{ fontSize: `${0.75 + (kw.count / maxCount) * 0.45}rem` }}
-                title={`${kw.count}회`}
-              >
-                {kw.word}
-                <span style={{ opacity: 0.45, marginLeft: 5, fontSize: '0.65rem' }}>{kw.count}</span>
-              </span>
+          <div className="keyword-bars">
+            {keywords.map((kw, i) => (
+              <div key={kw.word} className="keyword-bar-row" style={{ animationDelay: `${i * 30}ms` }}>
+                <span className="keyword-bar-label mono">{kw.word}</span>
+                <div className="keyword-bar-track">
+                  <div
+                    className="keyword-bar-fill"
+                    style={{ width: `${Math.max(8, (kw.count / maxCount) * 100)}%` }}
+                  />
+                </div>
+                <span className="keyword-bar-count mono">{kw.count}</span>
+              </div>
             ))}
           </div>
         )}

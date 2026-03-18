@@ -26,6 +26,7 @@ export default function Settings() {
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState(null)
   const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
+  const [uploadStatus, setUploadStatus] = useState('')
   const [messages, setMessages] = useState([])
   const [testMsg, setTestMsg] = useState('')
   const [loading, setLoading] = useState(false)
@@ -150,6 +151,42 @@ export default function Settings() {
     setLoading(false)
   }
 
+  const handleRagUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+    setUploadStatus(`업로드 중... (${files.length}개 파일)`)
+    let totalParsed = 0, totalChunks = 0
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('file', file)
+      try {
+        const res = await fetch('/api/rag/upload', { method: 'POST', body: formData })
+        const data = await res.json()
+        if (res.ok) {
+          totalParsed += data.parsed
+          totalChunks += data.chunks
+        } else {
+          toast.error(`${file.name}: ${data.error}`)
+        }
+      } catch (err) {
+        toast.error(`${file.name}: ${err.message}`)
+      }
+    }
+    setUploadStatus('')
+    toast.success(`${totalParsed.toLocaleString()}개 메시지 → ${totalChunks}개 벡터 저장`)
+    fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
+    e.target.value = ''
+  }
+
+  const clearRag = async () => {
+    if (!confirm('RAG 데이터를 전부 삭제하시겠습니까?')) return
+    const res = await fetch('/api/rag', { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('RAG 초기화 완료')
+      fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
+    }
+  }
+
   const models = MODEL_OPTIONS[provider] || []
 
   return (
@@ -214,6 +251,31 @@ export default function Settings() {
                 <div className="card-label">Chunk Size</div>
                 <div className="card-value mono" style={{ color: 'var(--text-secondary)', fontSize: '0.93rem' }}>5 messages</div>
               </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)' }}>
+              <div className="card-label" style={{ marginBottom: 'var(--space-3)' }}>Import KakaoTalk</div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept=".txt"
+                  multiple
+                  id="rag-upload"
+                  style={{ display: 'none' }}
+                  onChange={handleRagUpload}
+                />
+                <label htmlFor="rag-upload" className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                  .txt 파일 선택
+                </label>
+                {uploadStatus && <span className="hint">{uploadStatus}</span>}
+              </div>
+              <div className="btn-group" style={{ marginTop: 'var(--space-3)' }}>
+                <button className="btn btn-ghost" style={{ color: 'var(--red)', fontSize: '0.8rem', padding: '4px 12px' }}
+                  onClick={clearRag}>
+                  RAG 초기화
+                </button>
+              </div>
+              <p className="form-hint">카카오톡 내보내기 .txt 파일을 업로드하면 RAG에 저장됩니다.</p>
             </div>
           </div>
 

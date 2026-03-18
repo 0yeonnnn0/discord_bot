@@ -1,4 +1,6 @@
 const { Router } = require("express");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const { client } = require("../../bot/client");
 const { state, getTopKeywords, getUserStatsRanked } = require("../../shared/state");
 const {
@@ -111,6 +113,76 @@ router.post("/test-reply", async (req, res) => {
     const history = [{ role: "user", content: `테스터: ${message}` }];
     const reply = await getReply(history, "", process.env.OWNER_ID || "");
     res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RAG: 카카오톡 파일 업로드 ──
+router.post("/rag/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "파일이 필요합니다" });
+
+  const { storeConversation, getStats } = require("../../bot/rag");
+
+  try {
+    const text = req.file.buffer.toString("utf-8");
+    const lines = text.split("\n");
+
+    // 카카오톡 메시지 파싱: "날짜, 이름 : 메시지" 형태
+    const msgRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}\s+[오전후]+\s+\d{1,2}:\d{2}),\s*(.+?)\s*:\s*(.+)$/;
+    const messages = [];
+
+    for (const line of lines) {
+      const match = line.match(msgRegex);
+      if (match) {
+        messages.push({
+          content: `${match[2]}: ${match[3]}`,
+        });
+      }
+    }
+
+    if (messages.length === 0) {
+      return res.status(400).json({ error: "파싱된 메시지가 없습니다. 카카오톡 내보내기 형식인지 확인하세요." });
+    }
+
+    // 5개씩 묶어서 벡터 저장
+    const chunkSize = 5;
+    let stored = 0;
+
+    for (let i = 0; i < messages.length; i += chunkSize) {
+      const chunk = messages.slice(i, i + chunkSize);
+      await storeConversation({
+        channel: "kakaotalk-import",
+        messages: chunk,
+        timestamp: Date.now(),
+      });
+      stored++;
+    }
+
+    const stats = await getStats();
+    res.json({
+      parsed: messages.length,
+      chunks: stored,
+      totalVectors: stats.vectorCount,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// RAG 벡터 초기화
+router.delete("/rag", async (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+  const vectorDir = path.join(__dirname, "../../../data/vectors");
+  try {
+    if (fs.existsSync(vectorDir)) {
+      fs.rmSync(vectorDir, { recursive: true });
+      fs.mkdirSync(vectorDir, { recursive: true });
+    }
+    const { initIndex } = require("../../bot/rag");
+    await initIndex();
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

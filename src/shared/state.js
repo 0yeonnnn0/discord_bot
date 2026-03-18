@@ -114,9 +114,10 @@ const STOP_WORDS = new Set([
 
 function trackKeywords(content) {
   const words = content
+    .replace(/<@!?\d+>/g, "")       // 멘션 ID 제거
     .replace(/[^\w가-힣]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 2 && !STOP_WORDS.has(w));
+    .filter((w) => w.length >= 2 && !STOP_WORDS.has(w) && !/^\d+$/.test(w));
 
   for (const word of words) {
     state.keywords[word] = (state.keywords[word] || 0) + 1;
