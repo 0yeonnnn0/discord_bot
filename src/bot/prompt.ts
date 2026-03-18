@@ -1,12 +1,28 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const DATA_DIR = path.join(__dirname, "../../data");
 const PRESETS_FILE = path.join(DATA_DIR, "presets.json");
 const ACTIVE_FILE = path.join(DATA_DIR, "active-preset.json");
 
+// ── Types ──
+export interface Preset {
+  name: string;
+  description: string;
+  prompt: string;
+  ownerSuffix: string;
+  userSuffix: string;
+}
+
+export interface PresetInfo {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
 // ── 기본 프리셋들 ──
-const DEFAULT_PRESETS = {
+const DEFAULT_PRESETS: Record<string, Preset> = {
   neko: {
     name: "TORO 냥체",
     description: "건방진 고양이 봇 (냥체 + 아스카 + 파워)",
@@ -293,10 +309,9 @@ A: 고수는 이럴때
 };
 
 // ── 프리셋 저장/불러오기 ──
-let presets = { ...DEFAULT_PRESETS };
+let presets: Record<string, Preset> = { ...DEFAULT_PRESETS };
 let activePresetId = "neko";
 
-// 저장된 프리셋 불러오기
 try {
   if (fs.existsSync(PRESETS_FILE)) {
     const saved = JSON.parse(fs.readFileSync(PRESETS_FILE, "utf-8"));
@@ -308,18 +323,17 @@ try {
     activePresetId = data.activePresetId || "neko";
   }
 } catch (err) {
-  console.error("프리셋 복원 실패:", err.message);
+  console.error("프리셋 복원 실패:", (err as Error).message);
 }
 
-function ensureDir() {
+function ensureDir(): void {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function savePresets() {
+function savePresets(): void {
   try {
     ensureDir();
-    // 커스텀 프리셋만 저장 (기본은 코드에 있으니까)
-    const custom = {};
+    const custom: Record<string, Preset> = {};
     for (const [id, preset] of Object.entries(presets)) {
       if (!DEFAULT_PRESETS[id] || JSON.stringify(preset) !== JSON.stringify(DEFAULT_PRESETS[id])) {
         custom[id] = preset;
@@ -328,12 +342,12 @@ function savePresets() {
     fs.writeFileSync(PRESETS_FILE, JSON.stringify(custom, null, 2));
     fs.writeFileSync(ACTIVE_FILE, JSON.stringify({ activePresetId }));
   } catch (err) {
-    console.error("프리셋 저장 실패:", err.message);
+    console.error("프리셋 저장 실패:", (err as Error).message);
   }
 }
 
 // ── API ──
-function getPresets() {
+export function getPresets(): PresetInfo[] {
   return Object.entries(presets).map(([id, p]) => ({
     id,
     name: p.name,
@@ -342,22 +356,22 @@ function getPresets() {
   }));
 }
 
-function getPreset(id) {
+export function getPreset(id: string): Preset | null {
   return presets[id] || null;
 }
 
-function getActivePresetId() {
+export function getActivePresetId(): string {
   return activePresetId;
 }
 
-function setActivePreset(id) {
+export function setActivePreset(id: string): boolean {
   if (!presets[id]) return false;
   activePresetId = id;
   savePresets();
   return true;
 }
 
-function upsertPreset(id, data) {
+export function upsertPreset(id: string, data: Partial<Preset>): void {
   presets[id] = {
     name: data.name || id,
     description: data.description || "",
@@ -368,7 +382,7 @@ function upsertPreset(id, data) {
   savePresets();
 }
 
-function deletePreset(id) {
+export function deletePreset(id: string): boolean {
   if (!presets[id]) return false;
   delete presets[id];
   if (activePresetId === id) activePresetId = "neko";
@@ -377,11 +391,11 @@ function deletePreset(id) {
 }
 
 // ── 프롬프트 빌드 ──
-function getActivePrompt() {
+export function getActivePrompt(): string {
   return presets[activePresetId]?.prompt || presets.neko.prompt;
 }
 
-function buildPromptWithCustom(userId) {
+export function buildPromptWithCustom(userId: string): string {
   const preset = presets[activePresetId] || presets.neko;
   const ownerIds = (process.env.OWNER_ID || "").split(",").map((id) => id.trim());
   const isOwner = ownerIds.includes(userId);
@@ -396,14 +410,3 @@ function buildPromptWithCustom(userId) {
 }
 
 console.log(`프리셋: ${activePresetId} (${presets[activePresetId]?.name})`);
-
-module.exports = {
-  getPresets,
-  getPreset,
-  getActivePresetId,
-  setActivePreset,
-  upsertPreset,
-  deletePreset,
-  getActivePrompt,
-  buildPromptWithCustom,
-};

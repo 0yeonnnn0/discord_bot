@@ -1,12 +1,10 @@
-const { buildPromptWithCustom } = require("./prompt");
-const { state } = require("../shared/state");
+import { buildPromptWithCustom } from "./prompt";
+import { state } from "../shared/state";
+import type { HistoryMessage } from "./history";
 
-async function getReply(history, ragContext = "", userId = "") {
+export async function getReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string> {
   const basePrompt = buildPromptWithCustom(userId);
-  const prompt = ragContext
-    ? basePrompt + ragContext
-    : basePrompt;
-
+  const prompt = ragContext ? basePrompt + ragContext : basePrompt;
   const provider = state.config.aiProvider;
   const model = state.config.model;
 
@@ -22,8 +20,7 @@ async function getReply(history, ragContext = "", userId = "") {
   }
 }
 
-// --- Anthropic Claude ---
-async function getAnthropicReply(history, prompt, model) {
+async function getAnthropicReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
   const Anthropic = require("@anthropic-ai/sdk");
   const client = new Anthropic();
   const response = await client.messages.create({
@@ -35,12 +32,11 @@ async function getAnthropicReply(history, prompt, model) {
   return response.content[0].text;
 }
 
-// --- OpenAI GPT ---
-async function getOpenAIReply(history, prompt, model) {
+async function getOpenAIReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
   const OpenAI = require("openai");
   const client = new OpenAI();
   const messages = [
-    { role: "system", content: prompt },
+    { role: "system" as const, content: prompt },
     ...history,
   ];
   const response = await client.chat.completions.create({
@@ -51,8 +47,7 @@ async function getOpenAIReply(history, prompt, model) {
   return response.choices[0].message.content;
 }
 
-// --- Google Gemini ---
-async function getGoogleReply(history, prompt, model) {
+async function getGoogleReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
   const m = genAI.getGenerativeModel({
@@ -70,5 +65,3 @@ async function getGoogleReply(history, prompt, model) {
 }
 
 console.log(`AI: ${state.config.aiProvider} / ${state.config.model}`);
-
-module.exports = { getReply };

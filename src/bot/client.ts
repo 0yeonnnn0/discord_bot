@@ -1,15 +1,15 @@
-const { Client, GatewayIntentBits } = require("discord.js");
-const { getReply } = require("./ai");
-const history = require("./history");
-const rag = require("./rag");
-const { state, addLog, addEvent, addError, trackUser, trackKeywords } = require("../shared/state");
-const { enqueue, canUserRequest, markUserRequest } = require("./queue");
+import { Client, GatewayIntentBits, Message } from "discord.js";
+import { getReply } from "./ai";
+import * as history from "./history";
+import * as rag from "./rag";
+import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
+import { enqueue, canUserRequest, markUserRequest } from "./queue";
+import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
 
-// 채널별 대화 버퍼 (일정량 모이면 벡터 저장)
-const conversationBuffer = new Map();
+const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
 
-const client = new Client({
+export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -17,32 +17,19 @@ const client = new Client({
   ],
 });
 
-// ── 봇 이벤트 ──
+// ── Events ──
 client.once("ready", () => {
-  console.log(`봇 로그인 완료: ${client.user.tag}`);
-  addEvent("bot_ready", `${client.user.tag} — ${client.guilds.cache.size}개 서버`);
+  console.log(`봇 로그인 완료: ${client.user!.tag}`);
+  addEvent("bot_ready", `${client.user!.tag} — ${client.guilds.cache.size}개 서버`);
 });
 
-client.on("guildCreate", (guild) => {
-  addEvent("guild_join", `${guild.name} (${guild.memberCount}명)`);
-});
+client.on("guildCreate", (guild) => addEvent("guild_join", `${guild.name} (${guild.memberCount}명)`));
+client.on("guildDelete", (guild) => addEvent("guild_leave", guild.name));
+client.on("error", (err) => addError("discord", err.message));
+client.on("warn", (msg) => addEvent("discord_warn", msg));
 
-client.on("guildDelete", (guild) => {
-  addEvent("guild_leave", guild.name);
-});
-
-client.on("error", (err) => {
-  addError("discord", err.message);
-});
-
-client.on("warn", (msg) => {
-  addEvent("discord_warn", msg);
-});
-
-// ── 명령어 처리 ──
-const { getPresets, setActivePreset, getActivePresetId } = require("./prompt");
-
-function handleCommand(message) {
+// ── Commands ──
+function handleCommand(message: Message): boolean {
   const content = message.content.trim();
   if (!content.startsWith("!모드")) return false;
 
@@ -58,11 +45,8 @@ function handleCommand(message) {
     return true;
   }
 
-  // ID 또는 이름으로 검색
   const presets = getPresets();
-  const found = presets.find(p =>
-    p.id === sub || p.name.includes(sub)
-  );
+  const found = presets.find(p => p.id === sub || p.name.includes(sub));
 
   if (!found) {
     message.reply(`\`${sub}\` 프리셋을 못 찾겠어. \`!모드 목록\`으로 확인해봐`);
@@ -74,17 +58,14 @@ function handleCommand(message) {
   return true;
 }
 
-// ── 메시지 처리 ──
-client.on("messageCreate", async (message) => {
+// ── Message handler ──
+client.on("messageCreate", async (message: Message) => {
   if (message.author.bot) return;
-
-  // 명령어 처리
   if (handleCommand(message)) return;
 
   const channelId = message.channel.id;
   const guildName = message.guild?.name || "DM";
-
-  // 봇 멘션 ID 제거 (<@123456789> 형태)
+  const channelName = "name" in message.channel ? (message.channel as any).name as string : "unknown";
   const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
 
   history.addMessage(channelId, {
@@ -95,33 +76,28 @@ client.on("messageCreate", async (message) => {
   state.stats.messagesProcessed++;
   trackKeywords(cleanContent);
 
-  // 대화 버퍼에 추가 (일정량 모이면 벡터 저장)
   if (!conversationBuffer.has(channelId)) {
     conversationBuffer.set(channelId, []);
   }
-  const buffer = conversationBuffer.get(channelId);
-  buffer.push({
-    content: `${message.author.displayName}: ${cleanContent}`,
-  });
+  const buffer = conversationBuffer.get(channelId)!;
+  buffer.push({ content: `${message.author.displayName}: ${cleanContent}` });
   if (buffer.length >= BUFFER_SIZE) {
     rag.storeConversation({
-      channel: message.channel.name,
+      channel: channelName,
       messages: buffer.splice(0),
       timestamp: Date.now(),
     });
   }
 
-  const isMentioned = message.mentions.has(client.user);
-  const shouldReply =
-    isMentioned || Math.random() < state.config.replyChance;
-
-  const triggerReason = isMentioned ? "mention" : shouldReply ? "random" : null;
+  const isMentioned = message.mentions.has(client.user!);
+  const shouldReply = isMentioned || Math.random() < state.config.replyChance;
+  const triggerReason: "mention" | "random" | null = isMentioned ? "mention" : shouldReply ? "random" : null;
 
   trackUser(message.author.id, message.author.displayName, shouldReply);
 
   addLog({
     guild: guildName,
-    channel: message.channel.name,
+    channel: channelName,
     author: message.author.displayName,
     content: cleanContent,
     botReplied: shouldReply,
@@ -133,15 +109,11 @@ client.on("messageCreate", async (message) => {
   });
 
   if (!shouldReply) return;
-
-  // 유저 쿨다운 체크 (멘션은 쿨다운 무시)
   if (!isMentioned && !canUserRequest(message.author.id)) return;
-
   markUserRequest(message.author.id);
 
-  // 큐에 넣어서 동시 호출 수 제한
-  // 대기 메시지 관리: cancelled 플래그로 race condition 방지
-  let waitingMsg = null;
+  // Queue + waiting message
+  let waitingMsg: Message<boolean> | null = null;
   let waitingCancelled = false;
   let waitingSending = false;
 
@@ -151,7 +123,6 @@ client.on("messageCreate", async (message) => {
     try {
       const msg = await message.reply("잠시 기다려달라냥... 0w0");
       if (waitingCancelled) {
-        // 이미 응답이 와서 취소됨 → 대기 메시지 삭제
         await msg.delete().catch(() => {});
       } else {
         waitingMsg = msg;
@@ -160,15 +131,10 @@ client.on("messageCreate", async (message) => {
     waitingSending = false;
   }, 2000);
 
-  async function sendReply(text) {
+  async function sendReply(text: string): Promise<void> {
     clearTimeout(queueDelay);
     waitingCancelled = true;
-
-    // 대기 메시지가 전송 중이면 잠깐 기다림
-    if (waitingSending) {
-      await new Promise(r => setTimeout(r, 500));
-    }
-
+    if (waitingSending) await new Promise(r => setTimeout(r, 500));
     if (waitingMsg) {
       await waitingMsg.edit(text);
     } else {
@@ -180,10 +146,9 @@ client.on("messageCreate", async (message) => {
 
   try {
     let ragHitCount = 0;
-
     const reply = await enqueue(async () => {
       const channelHistory = history.getHistory(channelId);
-      const ragResults = await rag.searchRelevant(message.content);
+      const ragResults = await rag.searchRelevant(cleanContent);
       ragHitCount = ragResults.length;
       const ragContext = rag.formatContext(ragResults);
       return getReply(channelHistory, ragContext, message.author.id);
@@ -191,21 +156,16 @@ client.on("messageCreate", async (message) => {
 
     const responseTime = Date.now() - startTime;
 
-    // null이면 큐 타임아웃으로 스킵된 것
     if (!reply) {
       clearTimeout(queueDelay);
       waitingCancelled = true;
-      if (waitingMsg) await waitingMsg.delete().catch(() => {});
+      if (waitingMsg) await (waitingMsg as Message).delete().catch(() => {});
       return;
     }
 
     await sendReply(reply);
 
-    history.addMessage(channelId, {
-      role: "assistant",
-      content: reply,
-    });
-
+    history.addMessage(channelId, { role: "assistant", content: reply });
     state.stats.repliesSent++;
 
     const lastLog = state.logs[state.logs.length - 1];
@@ -216,12 +176,12 @@ client.on("messageCreate", async (message) => {
     }
   } catch (err) {
     const responseTime = Date.now() - startTime;
-    const isRateLimit = err.message?.includes("429") || err.message?.includes("quota");
+    const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
 
     addError(
       isRateLimit ? "rate_limit" : "api_error",
-      err.message,
-      `channel: ${message.channel.name}, guild: ${guildName}`
+      (err as Error).message,
+      `channel: ${channelName}, guild: ${guildName}`
     );
 
     const lastLog = state.logs[state.logs.length - 1];
@@ -238,9 +198,7 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-async function start() {
+export async function start(): Promise<void> {
   addEvent("bot_start", "봇 프로세스 시작");
   await client.login(process.env.DISCORD_TOKEN);
 }
-
-module.exports = { client, start };
