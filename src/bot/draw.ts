@@ -12,7 +12,7 @@ function getGenAI(): GoogleGenerativeAI {
 
 export async function generateImage(prompt: string): Promise<AttachmentBuilder | null> {
   const model = getGenAI().getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-2.5-flash-preview-image-generation",
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"],
     } as any,
