@@ -11,6 +11,7 @@ import { getReply } from "./ai";
 import { state } from "../shared/state";
 import { getQueueStats } from "./queue";
 import { getStats as getRagStats } from "./rag";
+import { generateImage } from "./draw";
 
 // ── Command Definitions ──
 export const commands = [
@@ -54,6 +55,13 @@ export const commands = [
     .addIntegerOption(opt =>
       opt.setName("count").setDescription("Number of messages to summarize (default 50)").setMinValue(10).setMaxValue(100)
     ),
+
+  new SlashCommandBuilder()
+    .setName("draw")
+    .setDescription("Generate an image with AI")
+    .addStringOption(opt =>
+      opt.setName("prompt").setDescription("What to draw").setRequired(true)
+    ),
 ];
 
 // ── Register Commands ──
@@ -89,6 +97,9 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "summary":
       await handleSummary(interaction);
+      break;
+    case "draw":
+      await handleDraw(interaction);
       break;
   }
 }
@@ -233,6 +244,31 @@ ${chatLog}`;
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
     await interaction.editReply("요약 실패: " + (err as Error).message);
+  }
+}
+
+// ── /draw ──
+async function handleDraw(interaction: ChatInputCommandInteraction): Promise<void> {
+  const prompt = interaction.options.getString("prompt", true);
+  await interaction.deferReply();
+
+  try {
+    const attachment = await generateImage(prompt);
+    if (attachment) {
+      await interaction.editReply({
+        content: `**${prompt}**`,
+        files: [attachment],
+      });
+    } else {
+      await interaction.editReply("이미지 생성에 실패했어. 다른 프롬프트로 다시 시도해봐.");
+    }
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("429") || msg.includes("quota")) {
+      await interaction.editReply("이미지 생성 쿼터를 초과했어. 내일 다시 시도해봐.");
+    } else {
+      await interaction.editReply("이미지 생성 실패: " + msg);
+    }
   }
 }
 
