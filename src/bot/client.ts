@@ -14,6 +14,7 @@ export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
   ],
 });
@@ -40,6 +41,26 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.on("guildCreate", (guild) => addEvent("guild_join", `${guild.name} (${guild.memberCount}명)`));
+
+// ── 환영 메시지 ──
+client.on("guildMemberAdd", async (member) => {
+  addEvent("member_join", `${member.user.tag} → ${member.guild.name}`);
+
+  // 시스템 채널 (서버 설정에서 지정한 환영 채널)
+  const channel = member.guild.systemChannel;
+  if (!channel) return;
+
+  try {
+    const history = [{
+      role: "user" as const,
+      content: `새로운 멤버 "${member.user.displayName}"이(가) 서버에 들어왔어. 환영 인사를 해줘. 짧게.`,
+    }];
+    const reply = await getReply(history, "", "");
+    await channel.send(`${member} ${reply}`);
+  } catch {
+    await channel.send(`${member} 어서와!`).catch(() => {});
+  }
+});
 client.on("guildDelete", (guild) => addEvent("guild_leave", guild.name));
 client.on("error", (err) => addError("discord", err.message));
 client.on("warn", (msg) => addEvent("discord_warn", msg));
