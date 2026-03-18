@@ -69,7 +69,7 @@ client.on("messageCreate", async (message) => {
     const ragResults = await rag.searchRelevant(message.content);
     const ragContext = rag.formatContext(ragResults);
 
-    const reply = await getReply(channelHistory, ragContext);
+    const reply = await getReply(channelHistory, ragContext, message.author.id);
 
     await message.reply(reply);
 
