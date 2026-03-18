@@ -1,20 +1,17 @@
-const path = require("path");
-const express = require("express");
-const apiRoutes = require("./routes/api");
+import path from "path";
+import express from "express";
+import apiRoutes from "./routes/api";
 
 const FRONTEND_DIR = path.join(__dirname, "../../frontend/dist");
 
-function createServer() {
+export function createServer(): express.Application {
   const app = express();
-
   app.use(express.json());
 
-  // 인증
   const secret = process.env.DASHBOARD_SECRET;
-  const sessions = new Set();
+  const sessions = new Set<string>();
 
   if (secret && secret !== "changeme") {
-    // 로그인 API (인증 전에 접근 가능)
     app.post("/api/login", (req, res) => {
       if (req.body.password === secret) {
         const sessionId = Math.random().toString(36).slice(2);
@@ -25,7 +22,6 @@ function createServer() {
       res.status(401).json({ error: "wrong password" });
     });
 
-    // 인증 체크 (API 라우트에만 적용)
     app.use("/api", (req, res, next) => {
       const cookieHeader = req.headers.cookie || "";
       const sidMatch = cookieHeader.match(/sid=([^;]+)/);
@@ -36,16 +32,11 @@ function createServer() {
   }
 
   app.use("/api", apiRoutes);
-
-  // React 정적 파일 서빙
   app.use(express.static(FRONTEND_DIR));
 
-  // SPA fallback: 모든 라우트를 index.html로
-  app.get("*", (req, res) => {
+  app.get("*", (_req, res) => {
     res.sendFile(path.join(FRONTEND_DIR, "index.html"));
   });
 
   return app;
 }
-
-module.exports = { createServer };

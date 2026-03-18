@@ -1,21 +1,46 @@
-const fs = require("fs");
-const path = require("path");
-const { LocalIndex } = require("vectra");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import fs from "fs";
+import path from "path";
+import { LocalIndex } from "vectra";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const DATA_DIR = path.join(__dirname, "../../data/vectors");
 const HITS_FILE = path.join(__dirname, "../../data/rag-hits.json");
 const index = new LocalIndex(DATA_DIR);
 
-// 히트 카운트 관리
-let hitCounts = {};
+// ── Types ──
+export interface SearchResult {
+  id: string;
+  text: string;
+  channel: string;
+  timestamp: number;
+  score: number;
+}
+
+export interface VectorItem {
+  id: string;
+  channel: string;
+  timestamp: number;
+  text: string;
+  messageCount: number;
+  hits: number;
+  lastHit: number | null;
+}
+
+interface HitRecord {
+  count: number;
+  lastHit: number;
+  timestamp: number;
+}
+
+// ── Hit counts ──
+let hitCounts: Record<string, HitRecord> = {};
 try {
   if (fs.existsSync(HITS_FILE)) {
     hitCounts = JSON.parse(fs.readFileSync(HITS_FILE, "utf-8"));
   }
 } catch {}
 
-function saveHits() {
+function saveHits(): void {
   try {
     const dir = path.dirname(HITS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -23,27 +48,26 @@ function saveHits() {
   } catch {}
 }
 
-// 30초마다 저장
 setInterval(saveHits, 30000);
 
-let genAI = null;
+// ── GenAI ──
+let genAI: GoogleGenerativeAI | null = null;
 
-function getGenAI() {
+function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
-    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
   }
   return genAI;
 }
 
-// 임베딩 생성
-async function getEmbedding(text) {
+async function getEmbedding(text: string): Promise<number[]> {
   const model = getGenAI().getGenerativeModel({ model: "gemini-embedding-001" });
   const result = await model.embedContent(text);
   return result.embedding.values;
 }
 
-// 인덱스 초기화
-async function initIndex() {
+// ── Public API ──
+export async function initIndex(): Promise<void> {
   if (!(await index.isIndexCreated())) {
     await index.createIndex();
     console.log("벡터 인덱스 생성 완료");
@@ -51,38 +75,36 @@ async function initIndex() {
   console.log("RAG 시스템 초기화 완료");
 }
 
-// 대화 묶음 저장
-async function storeConversation({ channel, messages, timestamp }) {
-  const text = messages.map((m) => m.content).join("\n");
-
+export async function storeConversation(params: {
+  channel: string;
+  messages: { content: string }[];
+  timestamp: number;
+}): Promise<void> {
+  const text = params.messages.map((m) => m.content).join("\n");
   try {
     const vector = await getEmbedding(text);
     await index.insertItem({
       vector,
       metadata: {
-        channel,
-        timestamp,
+        channel: params.channel,
+        timestamp: params.timestamp,
         text,
-        messageCount: messages.length,
+        messageCount: params.messages.length,
       },
     });
   } catch (err) {
-    console.error("벡터 저장 실패:", err.message);
+    console.error("벡터 저장 실패:", (err as Error).message);
   }
 }
 
-// 관련 과거 대화 검색
-async function searchRelevant(query, topK = 3) {
+export async function searchRelevant(query: string, topK: number = 3): Promise<SearchResult[]> {
   try {
     if (!(await index.isIndexCreated())) return [];
-
     const vector = await getEmbedding(query);
-    const results = await index.queryItems(vector, topK);
+    const results = await (index as any).queryItems(vector, topK) as any[];
 
-    // 유사도 0.5 이상만
-    const filtered = results.filter((r) => r.score > 0.5);
+    const filtered = results.filter((r: any) => r.score > 0.5);
 
-    // 히트 카운트 기록
     for (const r of filtered) {
       const id = r.item.id || String(r.item.metadata.timestamp);
       if (!hitCounts[id]) hitCounts[id] = { count: 0, lastHit: 0, timestamp: r.item.metadata.timestamp };
@@ -90,7 +112,7 @@ async function searchRelevant(query, topK = 3) {
       hitCounts[id].lastHit = Date.now();
     }
 
-    return filtered.map((r) => ({
+    return filtered.map((r: any) => ({
       id: r.item.id,
       text: r.item.metadata.text,
       channel: r.item.metadata.channel,
@@ -98,45 +120,35 @@ async function searchRelevant(query, topK = 3) {
       score: r.score,
     }));
   } catch (err) {
-    console.error("벡터 검색 실패:", err.message);
+    console.error("벡터 검색 실패:", (err as Error).message);
     return [];
   }
 }
 
-// 검색 결과를 프롬프트용 텍스트로 변환
-function formatContext(results) {
+export function formatContext(results: SearchResult[]): string {
   if (results.length === 0) return "";
-
   const lines = results.map((r) => {
     const date = new Date(r.timestamp).toLocaleDateString("ko-KR");
     return `[${date} #${r.channel}]\n${r.text}`;
   });
-
   return `\n\n[관련 과거 대화]\n${lines.join("\n\n")}`;
 }
 
-// RAG 통계
-async function getStats() {
+export async function getStats(): Promise<{ vectorCount: number; indexCreated: boolean }> {
   try {
-    if (!(await index.isIndexCreated())) {
-      return { vectorCount: 0, indexCreated: false };
-    }
+    if (!(await index.isIndexCreated())) return { vectorCount: 0, indexCreated: false };
     const items = await index.listItems();
-    return {
-      vectorCount: items.length,
-      indexCreated: true,
-    };
+    return { vectorCount: items.length, indexCreated: true };
   } catch {
     return { vectorCount: 0, indexCreated: false };
   }
 }
 
-// 벡터 목록 (메타데이터 포함)
-async function listVectors() {
+export async function listVectors(): Promise<VectorItem[]> {
   try {
     if (!(await index.isIndexCreated())) return [];
     const items = await index.listItems();
-    return items.map((item) => ({
+    return items.map((item: any) => ({
       id: item.id,
       channel: item.metadata.channel,
       timestamp: item.metadata.timestamp,
@@ -149,5 +161,3 @@ async function listVectors() {
     return [];
   }
 }
-
-module.exports = { initIndex, storeConversation, searchRelevant, formatContext, getStats, listVectors };

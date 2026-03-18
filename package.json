@@ -1,11 +1,15 @@
 {
   "name": "discord-bot",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "디스코드 대화 참여형 AI 봇",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -16,5 +20,13 @@
     "multer": "^2.1.1",
     "openai": "^6.32.0",
     "vectra": "^0.12.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }
