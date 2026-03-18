@@ -65,21 +65,29 @@ export default function Dashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead style={{ width: 50 }}>#</TableHead>
+                <TableHead style={{ width: 56 }}>#</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead style={{ width: 110 }}>Messages</TableHead>
-                <TableHead style={{ width: 110 }}>Replies</TableHead>
-                <TableHead style={{ width: 90 }}>Rate</TableHead>
+                <TableHead style={{ width: 120 }}>Messages</TableHead>
+                <TableHead style={{ width: 120 }}>Replies</TableHead>
+                <TableHead style={{ width: 100 }}>Rate</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {userStats.map((u, i) => (
-                <TableRow key={u.id} className="hover:bg-white/[0.02]">
-                  <TableCell className="mono" style={{ color: 'var(--text-tertiary)' }}>{i + 1}</TableCell>
-                  <TableCell style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{u.displayName}</TableCell>
-                  <TableCell className="mono">{u.messages}</TableCell>
-                  <TableCell className="mono">{u.gotReplies}</TableCell>
-                  <TableCell className="mono text-accent">{u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%</TableCell>
+                <TableRow key={u.id}>
+                  <TableCell>
+                    <span className={`rank-num ${i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : 'default'}`}>
+                      {i + 1}
+                    </span>
+                  </TableCell>
+                  <TableCell style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{u.displayName}</TableCell>
+                  <TableCell className="mono">{u.messages.toLocaleString()}</TableCell>
+                  <TableCell className="mono">{u.gotReplies.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <span className="mono" style={{ color: 'var(--accent)' }}>
+                      {u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

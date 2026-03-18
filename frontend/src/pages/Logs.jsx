@@ -36,9 +36,12 @@ export default function Logs() {
           {['messages', 'events', 'errors'].map(t => (
             <a key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}
               style={{ cursor: 'pointer' }}>
-              {t === 'messages' ? `Messages (${logs.length})` :
-               t === 'events' ? `Events (${events.length})` :
-               `Errors (${errors.length})`}
+              {t === 'messages' ? `Messages` :
+               t === 'events' ? `Events` :
+               `Errors`}
+              <span className="mono" style={{ marginLeft: 6, fontSize: '0.7rem', opacity: 0.5 }}>
+                {t === 'messages' ? logs.length : t === 'events' ? events.length : errors.length}
+              </span>
             </a>
           ))}
         </div>
@@ -63,29 +66,31 @@ export default function Logs() {
                 <TableHead style={{ width: 100 }}>Channel</TableHead>
                 <TableHead style={{ width: 90 }}>Author</TableHead>
                 <TableHead>Message</TableHead>
-                <TableHead style={{ width: 65 }}>Trigger</TableHead>
-                <TableHead style={{ width: 55 }}>RAG</TableHead>
-                <TableHead style={{ width: 60 }}>Speed</TableHead>
-                <TableHead style={{ width: 180 }}>Bot Reply</TableHead>
+                <TableHead style={{ width: 60 }}>Trigger</TableHead>
+                <TableHead style={{ width: 50 }}>RAG</TableHead>
+                <TableHead style={{ width: 55 }}>Speed</TableHead>
+                <TableHead style={{ width: 200 }}>Bot Reply</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
+                  <TableCell colSpan={9} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
                     로그가 없습니다
                   </TableCell>
                 </TableRow>
               ) : filtered.map((log, i) => (
-                <TableRow key={i}
-                  className={log.error ? 'bg-red-500/5' : log.botReplied ? 'bg-indigo-500/5' : 'hover:bg-white/[0.02]'}>
+                <TableRow
+                  key={i}
+                  className={log.error ? 'row-error' : log.botReplied ? 'row-replied' : ''}
+                >
                   <TableCell className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                     {new Date(log.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </TableCell>
                   <TableCell style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{log.guild || '—'}</TableCell>
                   <TableCell style={{ color: 'var(--text-tertiary)' }}>#{log.channel}</TableCell>
-                  <TableCell style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{log.author}</TableCell>
-                  <TableCell style={{ color: 'var(--text-primary)' }}>{log.content}</TableCell>
+                  <TableCell style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.author}</TableCell>
+                  <TableCell className="wrap" style={{ color: 'var(--text-primary)' }}>{log.content}</TableCell>
                   <TableCell>
                     {log.triggerReason && (
                       <span className={`log-badge ${log.triggerReason}`}>
@@ -93,13 +98,13 @@ export default function Logs() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="mono" style={{ fontSize: '0.75rem', color: log.ragHits > 0 ? 'var(--accent)' : 'var(--text-tertiary)' }}>
-                    {log.ragHits > 0 ? `${log.ragHits}hit` : '—'}
+                  <TableCell className="mono" style={{ fontSize: '0.73rem', color: log.ragHits > 0 ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                    {log.ragHits > 0 ? `${log.ragHits}` : '—'}
                   </TableCell>
-                  <TableCell className="mono" style={{ fontSize: '0.75rem', color: getSpeedColor(log.responseTime) }}>
+                  <TableCell className="mono" style={{ fontSize: '0.73rem', color: getSpeedColor(log.responseTime) }}>
                     {log.responseTime ? `${(log.responseTime / 1000).toFixed(1)}s` : '—'}
                   </TableCell>
-                  <TableCell style={{ color: log.error ? 'var(--red)' : log.botReply ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: '0.83rem' }}>
+                  <TableCell className="wrap" style={{ color: log.error ? 'var(--red)' : log.botReply ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: '0.83rem' }}>
                     {log.error ? `[${log.error}]` : log.botReply || '—'}
                   </TableCell>
                 </TableRow>
@@ -114,27 +119,27 @@ export default function Logs() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead style={{ width: 160 }}>Time</TableHead>
-              <TableHead style={{ width: 140 }}>Type</TableHead>
+              <TableHead style={{ width: 170 }}>Time</TableHead>
+              <TableHead style={{ width: 150 }}>Type</TableHead>
               <TableHead>Detail</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {events.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
+                <TableCell colSpan={3} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
                   이벤트가 없습니다
                 </TableCell>
               </TableRow>
             ) : events.map((ev, i) => (
-              <TableRow key={i} className="hover:bg-white/[0.02]">
+              <TableRow key={i}>
                 <TableCell className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
                   {new Date(ev.timestamp).toLocaleString('ko-KR')}
                 </TableCell>
                 <TableCell>
-                  <span className={`log-badge ${ev.type}`}>{ev.type}</span>
+                  <span className={`log-badge ${ev.type}`}>{ev.type.replace(/_/g, ' ')}</span>
                 </TableCell>
-                <TableCell>{ev.detail}</TableCell>
+                <TableCell style={{ color: 'var(--text-primary)' }}>{ev.detail}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -146,28 +151,28 @@ export default function Logs() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead style={{ width: 160 }}>Time</TableHead>
-              <TableHead style={{ width: 120 }}>Type</TableHead>
+              <TableHead style={{ width: 170 }}>Time</TableHead>
+              <TableHead style={{ width: 130 }}>Type</TableHead>
               <TableHead>Message</TableHead>
-              <TableHead style={{ width: 200 }}>Detail</TableHead>
+              <TableHead style={{ width: 200 }}>Context</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {errors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
+                <TableCell colSpan={4} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
                   에러가 없습니다
                 </TableCell>
               </TableRow>
             ) : errors.map((err, i) => (
-              <TableRow key={i} className="hover:bg-white/[0.02]">
+              <TableRow key={i} className="row-error">
                 <TableCell className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
                   {new Date(err.timestamp).toLocaleString('ko-KR')}
                 </TableCell>
                 <TableCell>
-                  <span className="log-badge rate_limit">{err.type}</span>
+                  <span className="log-badge rate_limit">{err.type.replace(/_/g, ' ')}</span>
                 </TableCell>
-                <TableCell style={{ color: 'var(--red)', fontSize: '0.83rem', wordBreak: 'break-all' }}>{err.message}</TableCell>
+                <TableCell className="wrap" style={{ color: 'var(--red)', fontSize: '0.8rem' }}>{err.message}</TableCell>
                 <TableCell style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>{err.detail}</TableCell>
               </TableRow>
             ))}
