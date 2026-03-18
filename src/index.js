@@ -2,8 +2,10 @@ require("dotenv").config();
 
 const { start: startBot } = require("./bot/client");
 const { createServer } = require("./dashboard/server");
+const { initIndex } = require("./bot/rag");
 
 async function main() {
+  await initIndex();
   await startBot();
 
   const port = process.env.DASHBOARD_PORT || 3000;

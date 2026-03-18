@@ -1,7 +1,12 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { getReply } = require("./ai");
 const history = require("./history");
+const rag = require("./rag");
 const { state, addLog } = require("../shared/state");
+
+// 채널별 대화 버퍼 (일정량 모이면 벡터 저장)
+const conversationBuffer = new Map();
+const BUFFER_SIZE = 5;
 
 const client = new Client({
   intents: [
@@ -27,6 +32,22 @@ client.on("messageCreate", async (message) => {
 
   state.stats.messagesProcessed++;
 
+  // 대화 버퍼에 추가 (일정량 모이면 벡터 저장)
+  if (!conversationBuffer.has(channelId)) {
+    conversationBuffer.set(channelId, []);
+  }
+  const buffer = conversationBuffer.get(channelId);
+  buffer.push({
+    content: `${message.author.displayName}: ${message.content}`,
+  });
+  if (buffer.length >= BUFFER_SIZE) {
+    rag.storeConversation({
+      channel: message.channel.name,
+      messages: buffer.splice(0),
+      timestamp: Date.now(),
+    });
+  }
+
   const isMentioned = message.mentions.has(client.user);
   const shouldReply =
     isMentioned || Math.random() < state.config.replyChance;
@@ -43,7 +64,12 @@ client.on("messageCreate", async (message) => {
 
   try {
     const channelHistory = history.getHistory(channelId);
-    const reply = await getReply(channelHistory);
+
+    // RAG: 관련 과거 대화 검색
+    const ragResults = await rag.searchRelevant(message.content);
+    const ragContext = rag.formatContext(ragResults);
+
+    const reply = await getReply(channelHistory, ragContext);
 
     await message.reply(reply);
 
