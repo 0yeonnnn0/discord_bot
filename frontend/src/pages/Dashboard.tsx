@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { DashboardSkeleton } from '../components/Skeleton'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table'
+import type { BotStatus, UserStat, Keyword } from '../types'
 
 export default function Dashboard() {
-  const [status, setStatus] = useState(null)
-  const [userStats, setUserStats] = useState([])
-  const [keywords, setKeywords] = useState([])
+  const [status, setStatus] = useState<BotStatus | null>(null)
+  const [userStats, setUserStats] = useState<UserStat[]>([])
+  const [keywords, setKeywords] = useState<Keyword[]>([])
 
   const fetchData = () => {
     fetch('/api/status').then(r => r.json()).then(setStatus)
@@ -120,7 +121,7 @@ export default function Dashboard() {
   )
 }
 
-function fmt(ms) {
+function fmt(ms: number) {
   const d = Math.floor(ms / 86400000)
   const h = Math.floor((ms % 86400000) / 3600000)
   const m = Math.floor((ms % 3600000) / 60000)

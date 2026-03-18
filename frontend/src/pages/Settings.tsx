@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, ComposedChart } from 'recharts'
+import { Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, ComposedChart } from 'recharts'
+import type { PresetInfo, Preset, RagStats, RagVector, SearchResult, TimelineEntry } from '../types'
 
-const MODEL_OPTIONS = {
+interface ChatMessage {
+  role: 'user' | 'bot';
+  content: string;
+}
+
+const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
   google: [
     { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (Preview)' },
     { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
@@ -23,22 +29,22 @@ export default function Settings() {
   const [chance, setChance] = useState(8)
   const [provider, setProvider] = useState('google')
   const [model, setModel] = useState('')
-  const [presets, setPresets] = useState([])
+  const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
-  const [editingPreset, setEditingPreset] = useState(null)
-  const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
-  const [timeline, setTimeline] = useState([])
-  const [ragView, setRagView] = useState(null)
-  const [vectors, setVectors] = useState([])
+  const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
+  const [ragStats, setRagStats] = useState<RagStats>({ vectorCount: 0, indexCreated: false })
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([])
+  const [ragView, setRagView] = useState<string | null>(null)
+  const [vectors, setVectors] = useState<RagVector[]>([])
   const [ragQuery, setRagQuery] = useState('')
-  const [ragResults, setRagResults] = useState([])
+  const [ragResults, setRagResults] = useState<SearchResult[]>([])
   const [ragSearching, setRagSearching] = useState(false)
-  const [expandedChannel, setExpandedChannel] = useState(null)
+  const [expandedChannel, setExpandedChannel] = useState<string | null>(null)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [testMsg, setTestMsg] = useState('')
   const [loading, setLoading] = useState(false)
-  const chatEndRef = useRef(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   const fetchPresets = () => {
     fetch('/api/presets').then(r => r.json()).then(d => {
@@ -63,7 +69,7 @@ export default function Settings() {
   }, [messages])
 
   // 프리셋 선택하면 프롬프트 로드
-  const selectPreset = async (id) => {
+  const selectPreset = async (id: string) => {
     const res = await fetch(`/api/presets/${id}`)
     if (res.ok) {
       const data = await res.json()
@@ -71,7 +77,7 @@ export default function Settings() {
     }
   }
 
-  const activatePreset = async (id) => {
+  const activatePreset = async (id: string) => {
     const res = await fetch(`/api/presets/${id}/activate`, { method: 'PUT' })
     if (res.ok) {
       setActivePresetId(id)
@@ -109,7 +115,7 @@ export default function Settings() {
     }
   }
 
-  const deletePreset = async (id) => {
+  const deletePreset = async (id: string) => {
     if (!confirm('삭제하시겠습니까?')) return
     const res = await fetch(`/api/presets/${id}`, { method: 'DELETE' })
     if (res.ok) {
@@ -154,7 +160,7 @@ export default function Settings() {
       })
       const data = await res.json()
       setMessages(prev => [...prev, { role: 'bot', content: data.reply || data.error }])
-    } catch (err) {
+    } catch (err: any) {
       setMessages(prev => [...prev, { role: 'bot', content: 'Error: ' + err.message }])
     }
     setLoading(false)
@@ -179,28 +185,27 @@ export default function Settings() {
       const data = await res.json()
       setRagResults(data)
       if (data.length === 0) toast('매칭되는 벡터가 없습니다')
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.message)
     }
     setRagSearching(false)
   }
 
-  const groupByChannel = (items) => {
-    const groups = {}
+  const groupByChannel = (items: RagVector[]): Record<string, RagVector[]> => {
+    const groups: Record<string, RagVector[]> = {}
     for (const item of items) {
       const ch = item.channel || 'unknown'
       if (!groups[ch]) groups[ch] = []
       groups[ch].push(item)
     }
-    // 최신순 정렬
     for (const ch in groups) {
       groups[ch].sort((a, b) => b.timestamp - a.timestamp)
     }
     return groups
   }
 
-  const handleRagUpload = async (e) => {
-    const files = Array.from(e.target.files)
+  const handleRagUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
     if (files.length === 0) return
     setUploadStatus(`업로드 중... (${files.length}개 파일)`)
     let totalParsed = 0, totalChunks = 0
@@ -216,7 +221,7 @@ export default function Settings() {
         } else {
           toast.error(`${file.name}: ${data.error}`)
         }
-      } catch (err) {
+      } catch (err: any) {
         toast.error(`${file.name}: ${err.message}`)
       }
     }

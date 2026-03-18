@@ -1,6 +1,7 @@
-import { Toaster as Sonner } from "sonner";
+import React from "react";
+import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-const Toaster = (props) => {
+const Toaster = (props: ToasterProps) => {
   return (
     <Sonner
       theme="dark"
@@ -13,7 +14,7 @@ const Toaster = (props) => {
         "--success-text": "#43b581",
         "--error-bg": "#16213e",
         "--error-text": "#f04747",
-      }}
+      } as React.CSSProperties}
       {...props}
     />
   );

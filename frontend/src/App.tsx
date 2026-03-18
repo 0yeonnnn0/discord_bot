@@ -8,7 +8,7 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 
 function App() {
-  const [authed, setAuthed] = useState(null)
+  const [authed, setAuthed] = useState<boolean | null>(null)
 
   useEffect(() => {
     fetch('/api/status')
