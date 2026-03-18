@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 export default function Settings() {
   const [chance, setChance] = useState(8)
   const [prompt, setPrompt] = useState('')
   const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
+  const [messages, setMessages] = useState([])
   const [testMsg, setTestMsg] = useState('')
-  const [testReply, setTestReply] = useState('')
-  const [testLoading, setTestLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const chatEndRef = useRef(null)
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(d => setChance(Math.round(d.replyChance * 100)))
@@ -15,15 +16,17 @@ export default function Settings() {
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
   }, [])
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   const saveChance = async () => {
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ replyChance: chance / 100 }),
     })
-    res.ok
-      ? toast.success(`응답 확률 ${chance}%로 저장됨`)
-      : toast.error('저장 실패')
+    res.ok ? toast.success(`응답 확률 ${chance}%로 저장`) : toast.error('저장 실패')
   }
 
   const savePrompt = async () => {
@@ -32,9 +35,7 @@ export default function Settings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     })
-    res.ok
-      ? toast.success('시스템 프롬프트 저장됨')
-      : toast.error('프롬프트 저장 실패')
+    res.ok ? toast.success('프롬프트 저장 완료') : toast.error('저장 실패')
   }
 
   const resetPrompt = async () => {
@@ -43,95 +44,142 @@ export default function Settings() {
     if (res.ok) {
       const data = await res.json()
       setPrompt(data.prompt)
-      toast.success('기본 프롬프트로 복원됨')
+      toast.success('기본값 복원 완료')
     }
   }
 
   const sendTest = async () => {
-    if (!testMsg.trim()) return
-    setTestLoading(true)
-    setTestReply('')
+    const msg = testMsg.trim()
+    if (!msg || loading) return
+    setTestMsg('')
+    setMessages(prev => [...prev, { role: 'user', content: msg }])
+    setLoading(true)
     try {
       const res = await fetch('/api/test-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: testMsg }),
+        body: JSON.stringify({ message: msg }),
       })
       const data = await res.json()
-      setTestReply(data.reply || data.error)
+      setMessages(prev => [...prev, { role: 'bot', content: data.reply || data.error }])
     } catch (err) {
-      toast.error('응답 생성 실패: ' + err.message)
+      setMessages(prev => [...prev, { role: 'bot', content: 'Error: ' + err.message }])
     }
-    setTestLoading(false)
+    setLoading(false)
   }
 
   return (
-    <div className="dashboard">
-      <h1>설정</h1>
-
-      {/* 응답 확률 */}
-      <div className="section">
-        <h2>자동 응답 확률</h2>
-        <div className="settings-form">
-          <div className="slider-wrap">
-            <input type="range" min="0" max="100" value={chance}
-              onChange={e => setChance(Number(e.target.value))} />
-            <span id="chanceValue">{chance}%</span>
-          </div>
-          <button className="btn" onClick={saveChance}>저장</button>
-        </div>
+    <div className="stagger">
+      <div>
+        <h1>Settings</h1>
+        <p className="page-desc">봇 설정을 변경하고 실시간으로 테스트합니다</p>
       </div>
 
-      {/* RAG 현황 */}
-      <div className="section">
-        <h2>RAG 현황</h2>
-        <div className="cards" style={{ maxWidth: 400 }}>
-          <div className="card">
-            <div className="card-label">저장된 벡터</div>
-            <div className="card-value">{ragStats.vectorCount}개</div>
-          </div>
-          <div className="card">
-            <div className="card-label">인덱스 상태</div>
-            <div className={`card-value ${ragStats.indexCreated ? 'text-green' : 'text-red'}`}>
-              {ragStats.indexCreated ? '활성' : '비활성'}
+      <div className="command-center">
+        {/* Left: Configuration */}
+        <div className="stagger">
+          {/* Reply Chance */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">Reply Chance</span>
+              <button className="btn btn-primary" onClick={saveChance} style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}>
+                Save
+              </button>
+            </div>
+            <div className="slider-row">
+              <input type="range" min="0" max="100" value={chance}
+                onChange={e => setChance(Number(e.target.value))} />
+              <span className="slider-value">{chance}%</span>
             </div>
           </div>
-        </div>
-        <p className="hint">대화 5개마다 자동으로 벡터가 저장됨</p>
-      </div>
 
-      {/* 시스템 프롬프트 */}
-      <div className="section">
-        <h2>시스템 프롬프트</h2>
-        <textarea rows={20} value={prompt} onChange={e => setPrompt(e.target.value)} />
-        <div className="btn-group">
-          <button className="btn" onClick={savePrompt}>프롬프트 저장</button>
-          <button className="btn btn-secondary" onClick={resetPrompt}>기본값 복원</button>
-        </div>
-        <p className="hint">저장 시 즉시 반영됨. 컨테이너 재시작하면 기본값으로 돌아감</p>
-      </div>
+          {/* RAG Status */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">RAG Memory</span>
+              <span className="panel-badge">
+                {ragStats.indexCreated ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div className="card-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div>
+                <div className="card-label">Vectors</div>
+                <div className="card-value mono">{ragStats.vectorCount}</div>
+              </div>
+              <div>
+                <div className="card-label">Buffer</div>
+                <div className="card-value mono" style={{ fontSize: '0.87rem', color: 'var(--text-secondary)' }}>5 msg / chunk</div>
+              </div>
+            </div>
+          </div>
 
-      {/* 응답 테스트 */}
-      <div className="section">
-        <h2>응답 테스트</h2>
-        <div className="test-area">
-          <div className="test-input-wrap">
-            <input
-              type="text"
-              value={testMsg}
-              onChange={e => setTestMsg(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendTest()}
-              placeholder="테스트 메시지를 입력하세요"
+          {/* System Prompt */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">System Prompt</span>
+            </div>
+            <textarea
+              rows={16}
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              spellCheck={false}
             />
-            <button className="btn" onClick={sendTest} disabled={testLoading}>전송</button>
-          </div>
-          {testLoading && <p className="hint">응답 생성 중...</p>}
-          {testReply && (
-            <div className="test-result">
-              <div className="test-label">봇 응답:</div>
-              <div>{testReply}</div>
+            <div className="btn-group">
+              <button className="btn btn-primary" onClick={savePrompt}>Save Prompt</button>
+              <button className="btn btn-ghost" onClick={resetPrompt}>Reset Default</button>
             </div>
-          )}
+            <p className="form-hint">변경 시 즉시 반영됩니다. 컨테이너 재시작 후에도 유지됩니다.</p>
+          </div>
+        </div>
+
+        {/* Right: Live Test */}
+        <div className="test-panel">
+          <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div className="panel-header">
+              <span className="panel-title">Live Test</span>
+              {messages.length > 0 && (
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                  onClick={() => setMessages([])}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="chat-messages">
+              {messages.length === 0 && (
+                <div className="empty" style={{ padding: '2rem 0' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem', opacity: 0.3 }}>{'=^0w0^='}</div>
+                  <div>메시지를 보내서 봇을 테스트하세요</div>
+                </div>
+              )}
+              {messages.map((m, i) => (
+                <div key={i} className={`chat-msg ${m.role}`}>
+                  {m.content}
+                </div>
+              ))}
+              {loading && (
+                <div className="chat-msg bot loading">typing...</div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="chat-input-row">
+              <input
+                type="text"
+                value={testMsg}
+                onChange={e => setTestMsg(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendTest()}
+                placeholder="메시지 입력..."
+                disabled={loading}
+              />
+              <button className="btn btn-primary" onClick={sendTest} disabled={loading || !testMsg.trim()}>
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

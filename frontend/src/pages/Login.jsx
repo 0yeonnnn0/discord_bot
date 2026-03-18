@@ -4,6 +4,7 @@ import { Toaster } from '../components/ui/sonner'
 
 export default function Login({ onSuccess }) {
   const [password, setPassword] = useState('')
+  const [shaking, setShaking] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -15,32 +16,54 @@ export default function Login({ onSuccess }) {
     if (res.ok) {
       onSuccess()
     } else {
-      toast.error('비밀번호가 틀렸다냥 냥냥펀치!!')
+      toast.error('Wrong password')
       setPassword('')
+      setShaking(true)
+      setTimeout(() => setShaking(false), 500)
     }
   }
 
   return (
     <>
-      <nav><div className="nav-brand">TORO Bot =^0w0^=</div></nav>
+      <nav>
+        <div className="nav-brand">
+          <span className="dot" style={{ background: 'var(--accent)' }} />
+          TORO
+        </div>
+      </nav>
       <main>
         <div className="login-wrap">
-          <div className="login-box">
-            <h2>=^0w0^=</h2>
+          <div
+            className="login-box"
+            style={{
+              animation: shaking ? 'shake 0.4s ease-in-out' : 'fade-up 0.5s ease-out',
+            }}
+          >
+            <div className="brand">TORO</div>
+            <div className="subtitle">Discord Bot Dashboard</div>
             <form onSubmit={handleSubmit}>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호"
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Password"
                 autoFocus
               />
-              <button className="btn" style={{ width: '100%' }}>들어가기</button>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '0.25rem' }}>
+                Enter
+              </button>
             </form>
           </div>
         </div>
-      <Toaster position="top-right" />
       </main>
+      <Toaster position="top-right" />
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          75% { transform: translateX(8px); }
+        }
+      `}</style>
     </>
   )
 }
