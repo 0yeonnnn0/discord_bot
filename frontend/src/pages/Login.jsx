@@ -40,7 +40,7 @@ export default function Login({ onSuccess }) {
             }}
           >
             <div className="brand">TORO</div>
-            <div className="subtitle">Discord Bot Dashboard</div>
+            <div className="subtitle">=^0w0^=</div>
             <form onSubmit={handleSubmit}>
               <input
                 type="password"
