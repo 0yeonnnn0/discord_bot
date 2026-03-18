@@ -99,12 +99,41 @@ client.on("messageCreate", async (message) => {
   markUserRequest(message.author.id);
 
   // 큐에 넣어서 동시 호출 수 제한
+  // 대기 메시지 관리: cancelled 플래그로 race condition 방지
   let waitingMsg = null;
+  let waitingCancelled = false;
+  let waitingSending = false;
+
   const queueDelay = setTimeout(async () => {
+    if (waitingCancelled) return;
+    waitingSending = true;
     try {
-      waitingMsg = await message.reply("잠시 기다려달라냥... 0w0");
+      const msg = await message.reply("잠시 기다려달라냥... 0w0");
+      if (waitingCancelled) {
+        // 이미 응답이 와서 취소됨 → 대기 메시지 삭제
+        await msg.delete().catch(() => {});
+      } else {
+        waitingMsg = msg;
+      }
     } catch {}
+    waitingSending = false;
   }, 2000);
+
+  async function sendReply(text) {
+    clearTimeout(queueDelay);
+    waitingCancelled = true;
+
+    // 대기 메시지가 전송 중이면 잠깐 기다림
+    if (waitingSending) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (waitingMsg) {
+      await waitingMsg.edit(text);
+    } else {
+      await message.reply(text);
+    }
+  }
 
   const startTime = Date.now();
 
@@ -119,22 +148,17 @@ client.on("messageCreate", async (message) => {
       return getReply(channelHistory, ragContext, message.author.id);
     });
 
-    clearTimeout(queueDelay);
-
     const responseTime = Date.now() - startTime;
 
     // null이면 큐 타임아웃으로 스킵된 것
     if (!reply) {
+      clearTimeout(queueDelay);
+      waitingCancelled = true;
       if (waitingMsg) await waitingMsg.delete().catch(() => {});
       return;
     }
 
-    // 대기 메시지가 있으면 수정, 없으면 새로 보내기
-    if (waitingMsg) {
-      await waitingMsg.edit(reply);
-    } else {
-      await message.reply(reply);
-    }
+    await sendReply(reply);
 
     history.addMessage(channelId, {
       role: "assistant",
@@ -143,7 +167,6 @@ client.on("messageCreate", async (message) => {
 
     state.stats.repliesSent++;
 
-    // 로그에 추가 정보 기록
     const lastLog = state.logs[state.logs.length - 1];
     if (lastLog) {
       lastLog.botReply = reply;
@@ -151,19 +174,15 @@ client.on("messageCreate", async (message) => {
       lastLog.ragHits = ragHitCount;
     }
   } catch (err) {
-    clearTimeout(queueDelay);
-
     const responseTime = Date.now() - startTime;
     const isRateLimit = err.message?.includes("429") || err.message?.includes("quota");
 
-    // 에러 로그 기록
     addError(
       isRateLimit ? "rate_limit" : "api_error",
       err.message,
       `channel: ${message.channel.name}, guild: ${guildName}`
     );
 
-    // 메시지 로그에도 에러 기록
     const lastLog = state.logs[state.logs.length - 1];
     if (lastLog) {
       lastLog.responseTime = responseTime;
@@ -174,11 +193,7 @@ client.on("messageCreate", async (message) => {
       ? "오늘은 너무 많이 떠들었다냥... 내일 다시 돌아온다냥! >w<"
       : "뭔가 고장났다냥... @д@";
 
-    if (waitingMsg) {
-      await waitingMsg.edit(errorMsg).catch(() => {});
-    } else {
-      await message.reply(errorMsg).catch(() => {});
-    }
+    await sendReply(errorMsg).catch(() => {});
   }
 });
 
