@@ -72,6 +72,14 @@ client.on("messageCreate", async (message) => {
   markUserRequest(message.author.id);
 
   // 큐에 넣어서 동시 호출 수 제한
+  // 큐에 대기 중인 게 있으면 "잠시 기다려달라냥" 먼저 보내기
+  let waitingMsg = null;
+  const queueDelay = setTimeout(async () => {
+    try {
+      waitingMsg = await message.reply("잠시 기다려달라냥... 0w0");
+    } catch {}
+  }, 2000);
+
   try {
     const reply = await enqueue(async () => {
       const channelHistory = history.getHistory(channelId);
@@ -80,10 +88,20 @@ client.on("messageCreate", async (message) => {
       return getReply(channelHistory, ragContext, message.author.id);
     });
 
-    // null이면 큐 타임아웃으로 스킵된 것
-    if (!reply) return;
+    clearTimeout(queueDelay);
 
-    await message.reply(reply);
+    // null이면 큐 타임아웃으로 스킵된 것
+    if (!reply) {
+      if (waitingMsg) await waitingMsg.delete().catch(() => {});
+      return;
+    }
+
+    // 대기 메시지가 있으면 수정, 없으면 새로 보내기
+    if (waitingMsg) {
+      await waitingMsg.edit(reply);
+    } else {
+      await message.reply(reply);
+    }
 
     history.addMessage(channelId, {
       role: "assistant",
@@ -97,6 +115,8 @@ client.on("messageCreate", async (message) => {
       lastLog.botReply = reply;
     }
   } catch (err) {
+    clearTimeout(queueDelay);
+    if (waitingMsg) await waitingMsg.delete().catch(() => {});
     console.error("응답 생성 실패:", err.message);
   }
 });
