@@ -348,46 +348,8 @@ h2 {
   color: var(--green);
 }
 
-/* ═══════ Table ═══════ */
-.table-wrap {
-  overflow-x: auto;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-default);
-  background: var(--bg-card);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.87rem;
-}
-
-th {
-  background: var(--bg-raised);
-  color: var(--text-tertiary);
-  font-weight: 600;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: var(--space-4) var(--space-5);
-  text-align: left;
-  position: sticky;
-  top: 0;
-  border-bottom: 1px solid var(--border-default);
-}
-
-td {
-  padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  vertical-align: middle;
-}
-
-tbody tr { transition: background var(--transition-fast); }
-tbody tr:hover td { background: rgba(255, 255, 255, 0.015); }
-
-.row-replied td { background: var(--accent-muted); }
-.row-replied:hover td { background: rgba(88, 101, 242, 0.12); }
+/* ═══════ Table (shadcn overrides) ═══════ */
+[data-slot="table-row"] { transition: background var(--transition-fast); }
 
 /* ═══════ Keywords ═══════ */
 .keyword-cloud {

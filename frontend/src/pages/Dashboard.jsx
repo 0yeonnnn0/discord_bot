@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { DashboardSkeleton } from '../components/Skeleton'
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table'
 
 export default function Dashboard() {
   const [status, setStatus] = useState(null)
@@ -61,30 +62,28 @@ export default function Dashboard() {
         {userStats.length === 0 ? (
           <div className="empty">아직 데이터가 없습니다</div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: 50 }}>#</th>
-                  <th>User</th>
-                  <th style={{ width: 110 }}>Messages</th>
-                  <th style={{ width: 110 }}>Replies</th>
-                  <th style={{ width: 90 }}>Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userStats.map((u, i) => (
-                  <tr key={u.id}>
-                    <td className="mono" style={{ color: 'var(--text-tertiary)' }}>{i + 1}</td>
-                    <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{u.displayName}</td>
-                    <td className="mono">{u.messages}</td>
-                    <td className="mono">{u.gotReplies}</td>
-                    <td className="mono text-accent">{u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead style={{ width: 50 }}>#</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead style={{ width: 110 }}>Messages</TableHead>
+                <TableHead style={{ width: 110 }}>Replies</TableHead>
+                <TableHead style={{ width: 90 }}>Rate</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {userStats.map((u, i) => (
+                <TableRow key={u.id} className="hover:bg-white/[0.02]">
+                  <TableCell className="mono" style={{ color: 'var(--text-tertiary)' }}>{i + 1}</TableCell>
+                  <TableCell style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{u.displayName}</TableCell>
+                  <TableCell className="mono">{u.messages}</TableCell>
+                  <TableCell className="mono">{u.gotReplies}</TableCell>
+                  <TableCell className="mono text-accent">{u.messages > 0 ? Math.round(u.gotReplies / u.messages * 100) : 0}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 
