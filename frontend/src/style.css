@@ -492,6 +492,53 @@ h2 {
   text-align: right;
 }
 
+/* ═══════ Model Info ═══════ */
+.model-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.model-info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.model-info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.model-info-value {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.model-info-badge {
+  font-size: 0.63rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.model-info-badge.fixed {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
+}
+
 /* ═══════ Log Controls ═══════ */
 .log-controls {
   display: flex;
