@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Bot - 설정</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Discord Bot</div>
+    <div class="nav-links">
+      <a href="/">상태</a>
+      <a href="/logs">로그</a>
+      <a href="/settings">설정</a>
+    </div>
+  </nav>
+  <main>
+    <div class="dashboard">
+      <h1>설정</h1>
+      <div class="settings-form">
+        <div class="form-group">
+          <label for="replyChance">자동 응답 확률</label>
+          <div class="slider-wrap">
+            <input
+              type="range"
+              id="replyChance"
+              min="0"
+              max="100"
+              value="<%= Math.round(config.replyChance * 100) %>"
+            >
+            <span id="chanceValue"><%= Math.round(config.replyChance * 100) %>%</span>
+          </div>
+        </div>
+        <button id="saveBtn" class="btn">저장</button>
+        <span id="saveStatus"></span>
+      </div>
+    </div>
+  </main>
+  <script>
+    const slider = document.getElementById('replyChance');
+    const label = document.getElementById('chanceValue');
+    const btn = document.getElementById('saveBtn');
+    const status = document.getElementById('saveStatus');
+
+    slider.addEventListener('input', () => {
+      label.textContent = slider.value + '%';
+    });
+
+    btn.addEventListener('click', async () => {
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyChance: slider.value / 100 }),
+      });
+      if (res.ok) {
+        status.textContent = '저장 완료!';
+        status.className = 'text-green';
+      } else {
+        status.textContent = '저장 실패';
+        status.className = 'text-red';
+      }
+      setTimeout(() => { status.textContent = ''; }, 2000);
+    });
+  </script>
+</body>
+</html>

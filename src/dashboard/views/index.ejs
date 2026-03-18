@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Bot - 상태</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Discord Bot</div>
+    <div class="nav-links">
+      <a href="/">상태</a>
+      <a href="/logs">로그</a>
+      <a href="/settings">설정</a>
+    </div>
+  </nav>
+  <main>
+    <div class="dashboard">
+      <h1>봇 상태</h1>
+      <div class="cards">
+        <div class="card">
+          <div class="card-label">상태</div>
+          <div class="card-value <%= online ? 'text-green' : 'text-red' %>">
+            <%= online ? '● 온라인' : '○ 오프라인' %>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">봇</div>
+          <div class="card-value"><%= botTag %></div>
+        </div>
+        <div class="card">
+          <div class="card-label">업타임</div>
+          <div class="card-value"><%= Math.floor(uptime / 1000 / 60) %>분</div>
+        </div>
+        <div class="card">
+          <div class="card-label">처리한 메시지</div>
+          <div class="card-value"><%= stats.messagesProcessed %></div>
+        </div>
+        <div class="card">
+          <div class="card-label">봇 응답 수</div>
+          <div class="card-value"><%= stats.repliesSent %></div>
+        </div>
+        <div class="card">
+          <div class="card-label">응답 확률</div>
+          <div class="card-value"><%= Math.round(config.replyChance * 100) %>%</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

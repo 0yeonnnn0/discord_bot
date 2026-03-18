@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Bot - 로그</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Discord Bot</div>
+    <div class="nav-links">
+      <a href="/">상태</a>
+      <a href="/logs">로그</a>
+      <a href="/settings">설정</a>
+    </div>
+  </nav>
+  <main>
+    <div class="dashboard">
+      <h1>메시지 로그</h1>
+      <p class="hint">최근 100개 메시지 (5초마다 자동 새로고침)</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>시간</th>
+              <th>채널</th>
+              <th>작성자</th>
+              <th>내용</th>
+              <th>봇 응답</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% logs.forEach(log => { %>
+            <tr class="<%= log.botReplied ? 'row-replied' : '' %>">
+              <td><%= new Date(log.timestamp).toLocaleTimeString('ko-KR') %></td>
+              <td>#<%= log.channel %></td>
+              <td><%= log.author %></td>
+              <td><%= log.content %></td>
+              <td><%= log.botReply || '-' %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script>
+    setInterval(() => location.reload(), 5000);
+  </script>
+</body>
+</html>
