@@ -26,6 +26,12 @@ export default function Settings() {
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState(null)
   const [ragStats, setRagStats] = useState({ vectorCount: 0, indexCreated: false })
+  const [ragView, setRagView] = useState(null)
+  const [vectors, setVectors] = useState([])
+  const [ragQuery, setRagQuery] = useState('')
+  const [ragResults, setRagResults] = useState([])
+  const [ragSearching, setRagSearching] = useState(false)
+  const [expandedChannel, setExpandedChannel] = useState(null)
   const [uploadStatus, setUploadStatus] = useState('')
   const [messages, setMessages] = useState([])
   const [testMsg, setTestMsg] = useState('')
@@ -151,6 +157,45 @@ export default function Settings() {
     setLoading(false)
   }
 
+  // RAG 벡터 로드
+  useEffect(() => {
+    if (ragView === 'vectors' && vectors.length === 0) {
+      fetch('/api/rag/vectors').then(r => r.json()).then(setVectors)
+    }
+  }, [ragView])
+
+  const searchRag = async () => {
+    if (!ragQuery.trim() || ragSearching) return
+    setRagSearching(true)
+    try {
+      const res = await fetch('/api/rag/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: ragQuery }),
+      })
+      const data = await res.json()
+      setRagResults(data)
+      if (data.length === 0) toast('매칭되는 벡터가 없습니다')
+    } catch (err) {
+      toast.error(err.message)
+    }
+    setRagSearching(false)
+  }
+
+  const groupByChannel = (items) => {
+    const groups = {}
+    for (const item of items) {
+      const ch = item.channel || 'unknown'
+      if (!groups[ch]) groups[ch] = []
+      groups[ch].push(item)
+    }
+    // 최신순 정렬
+    for (const ch in groups) {
+      groups[ch].sort((a, b) => b.timestamp - a.timestamp)
+    }
+    return groups
+  }
+
   const handleRagUpload = async (e) => {
     const files = Array.from(e.target.files)
     if (files.length === 0) return
@@ -238,9 +283,16 @@ export default function Settings() {
           <div className="panel">
             <div className="panel-header">
               <span className="panel-title">RAG Memory</span>
-              <span className={`panel-badge ${ragStats.indexCreated ? 'green' : ''}`}>
-                {ragStats.indexCreated ? 'Active' : 'Inactive'}
-              </span>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <span className={`panel-badge ${ragStats.indexCreated ? 'green' : ''}`}>
+                  {ragStats.indexCreated ? 'Active' : 'Inactive'}
+                </span>
+                <button className="btn btn-ghost"
+                  style={{ padding: '2px 10px', fontSize: '0.73rem' }}
+                  onClick={() => { setRagView(ragView === 'vectors' ? null : 'vectors') }}>
+                  {ragView === 'vectors' ? 'Close' : 'Browse'}
+                </button>
+              </div>
             </div>
             <div className="rag-stats">
               <div className="rag-stat-item">
@@ -253,30 +305,81 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* RAG Search */}
             <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)' }}>
-              <div className="card-label" style={{ marginBottom: 'var(--space-3)' }}>Import KakaoTalk</div>
-              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
-                <input
-                  type="file"
-                  accept=".txt"
-                  multiple
-                  id="rag-upload"
-                  style={{ display: 'none' }}
-                  onChange={handleRagUpload}
-                />
-                <label htmlFor="rag-upload" className="btn btn-ghost" style={{ cursor: 'pointer' }}>
-                  .txt 파일 선택
-                </label>
-                {uploadStatus && <span className="hint">{uploadStatus}</span>}
-              </div>
-              <div className="btn-group" style={{ marginTop: 'var(--space-3)' }}>
-                <button className="btn btn-ghost" style={{ color: 'var(--red)', fontSize: '0.8rem', padding: '4px 12px' }}
-                  onClick={clearRag}>
-                  RAG 초기화
+              <div className="card-label" style={{ marginBottom: 'var(--space-3)' }}>Search Test</div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                <input type="text" value={ragQuery} onChange={e => setRagQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && searchRag()}
+                  placeholder="검색어 입력..." style={{ flex: 1 }} />
+                <button className="btn btn-primary" onClick={searchRag}
+                  disabled={ragSearching || !ragQuery.trim()}>
+                  {ragSearching ? '...' : 'Search'}
                 </button>
               </div>
-              <p className="form-hint">카카오톡 내보내기 .txt 파일을 업로드하면 RAG에 저장됩니다.</p>
+              {ragResults.length > 0 && (
+                <div className="rag-search-results">
+                  {ragResults.map((r, i) => (
+                    <div key={i} className="rag-result-item">
+                      <div className="rag-result-header">
+                        <span className="mono" style={{ color: 'var(--accent)', fontSize: '0.75rem' }}>
+                          {(r.score * 100).toFixed(0)}% match
+                        </span>
+                        <span className="hint">
+                          #{r.channel} · {new Date(r.timestamp).toLocaleDateString('ko-KR')}
+                        </span>
+                      </div>
+                      <div className="rag-result-text">{r.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* RAG Vector Browser */}
+            {ragView === 'vectors' && (
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+                  <div className="card-label">Stored Vectors ({vectors.length})</div>
+                  <button className="btn btn-ghost" style={{ color: 'var(--red)', fontSize: '0.75rem', padding: '2px 10px' }}
+                    onClick={clearRag}>
+                    Reset All
+                  </button>
+                </div>
+
+                {vectors.length === 0 ? (
+                  <div className="hint">벡터가 없습니다</div>
+                ) : (
+                  <div className="rag-vector-list">
+                    {/* 채널별 그룹 */}
+                    {Object.entries(groupByChannel(vectors)).map(([channel, items]) => (
+                      <div key={channel} className="rag-channel-group">
+                        <div className="rag-channel-header">
+                          <span>#{channel}</span>
+                          <span className="mono hint">{items.length} chunks</span>
+                        </div>
+                        {items.slice(0, expandedChannel === channel ? items.length : 3).map((v, i) => (
+                          <div key={i} className="rag-vector-item">
+                            <div className="rag-vector-meta">
+                              <span className="hint">{new Date(v.timestamp).toLocaleString('ko-KR')}</span>
+                              <span className="mono hint">{v.messageCount} msgs</span>
+                            </div>
+                            <div className="rag-vector-text">{v.text}</div>
+                          </div>
+                        ))}
+                        {items.length > 3 && (
+                          <button className="btn btn-ghost"
+                            style={{ width: '100%', fontSize: '0.75rem', padding: '4px', marginTop: 'var(--space-2)' }}
+                            onClick={() => setExpandedChannel(expandedChannel === channel ? null : channel)}>
+                            {expandedChannel === channel ? 'Collapse' : `+${items.length - 3} more`}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Prompt Presets */}

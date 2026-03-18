@@ -101,4 +101,21 @@ async function getStats() {
   }
 }
 
-module.exports = { initIndex, storeConversation, searchRelevant, formatContext, getStats };
+// 벡터 목록 (메타데이터 포함)
+async function listVectors() {
+  try {
+    if (!(await index.isIndexCreated())) return [];
+    const items = await index.listItems();
+    return items.map((item) => ({
+      id: item.id,
+      channel: item.metadata.channel,
+      timestamp: item.metadata.timestamp,
+      text: item.metadata.text,
+      messageCount: item.metadata.messageCount,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+module.exports = { initIndex, storeConversation, searchRelevant, formatContext, getStats, listVectors };

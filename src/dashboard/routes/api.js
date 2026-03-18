@@ -7,7 +7,7 @@ const {
   getPresets, getPreset, getActivePresetId, setActivePreset,
   upsertPreset, deletePreset, getActivePrompt,
 } = require("../../bot/prompt");
-const { getStats: getRagStats } = require("../../bot/rag");
+const { getStats: getRagStats, listVectors, searchRelevant } = require("../../bot/rag");
 const { getReply } = require("../../bot/ai");
 const { getQueueStats } = require("../../bot/queue");
 
@@ -113,6 +113,24 @@ router.post("/test-reply", async (req, res) => {
     const history = [{ role: "user", content: `테스터: ${message}` }];
     const reply = await getReply(history, "", process.env.OWNER_ID || "");
     res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RAG: 벡터 목록 ──
+router.get("/rag/vectors", async (req, res) => {
+  const vectors = await listVectors();
+  res.json(vectors);
+});
+
+// ── RAG: 검색 테스트 ──
+router.post("/rag/search", async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: "query가 필요합니다" });
+  try {
+    const results = await searchRelevant(query, 5);
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
