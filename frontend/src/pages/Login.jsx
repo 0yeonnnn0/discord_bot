@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { Toaster } from '../components/ui/sonner'
 
 export default function Login({ onSuccess }) {
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -14,7 +15,7 @@ export default function Login({ onSuccess }) {
     if (res.ok) {
       onSuccess()
     } else {
-      setError('비밀번호가 틀렸다냥 냥냥펀치!!')
+      toast.error('비밀번호가 틀렸다냥 냥냥펀치!!')
       setPassword('')
     }
   }
@@ -26,7 +27,6 @@ export default function Login({ onSuccess }) {
         <div className="login-wrap">
           <div className="login-box">
             <h2>=^0w0^=</h2>
-            {error && <p className="error">{error}</p>}
             <form onSubmit={handleSubmit}>
               <input
                 type="password"
@@ -39,6 +39,7 @@ export default function Login({ onSuccess }) {
             </form>
           </div>
         </div>
+      <Toaster position="top-right" />
       </main>
     </>
   )

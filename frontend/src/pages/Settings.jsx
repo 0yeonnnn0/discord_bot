@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 export default function Settings() {
   const [chance, setChance] = useState(8)
@@ -7,7 +8,6 @@ export default function Settings() {
   const [testMsg, setTestMsg] = useState('')
   const [testReply, setTestReply] = useState('')
   const [testLoading, setTestLoading] = useState(false)
-  const [saveStatus, setSaveStatus] = useState({})
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(d => setChance(Math.round(d.replyChance * 100)))
@@ -15,18 +15,15 @@ export default function Settings() {
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
   }, [])
 
-  const showStatus = (key, ok) => {
-    setSaveStatus(s => ({ ...s, [key]: ok ? '저장 완료!' : '실패' }))
-    setTimeout(() => setSaveStatus(s => ({ ...s, [key]: '' })), 2000)
-  }
-
   const saveChance = async () => {
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ replyChance: chance / 100 }),
     })
-    showStatus('chance', res.ok)
+    res.ok
+      ? toast.success(`응답 확률 ${chance}%로 저장됨`)
+      : toast.error('저장 실패')
   }
 
   const savePrompt = async () => {
@@ -35,7 +32,9 @@ export default function Settings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     })
-    showStatus('prompt', res.ok)
+    res.ok
+      ? toast.success('시스템 프롬프트 저장됨')
+      : toast.error('프롬프트 저장 실패')
   }
 
   const resetPrompt = async () => {
@@ -44,7 +43,7 @@ export default function Settings() {
     if (res.ok) {
       const data = await res.json()
       setPrompt(data.prompt)
-      showStatus('prompt', true)
+      toast.success('기본 프롬프트로 복원됨')
     }
   }
 
@@ -61,7 +60,7 @@ export default function Settings() {
       const data = await res.json()
       setTestReply(data.reply || data.error)
     } catch (err) {
-      setTestReply('에러: ' + err.message)
+      toast.error('응답 생성 실패: ' + err.message)
     }
     setTestLoading(false)
   }
@@ -79,10 +78,7 @@ export default function Settings() {
               onChange={e => setChance(Number(e.target.value))} />
             <span id="chanceValue">{chance}%</span>
           </div>
-          <div className="btn-group">
-            <button className="btn" onClick={saveChance}>저장</button>
-            {saveStatus.chance && <span className="text-green">{saveStatus.chance}</span>}
-          </div>
+          <button className="btn" onClick={saveChance}>저장</button>
         </div>
       </div>
 
@@ -111,7 +107,6 @@ export default function Settings() {
         <div className="btn-group">
           <button className="btn" onClick={savePrompt}>프롬프트 저장</button>
           <button className="btn btn-secondary" onClick={resetPrompt}>기본값 복원</button>
-          {saveStatus.prompt && <span className="text-green">{saveStatus.prompt}</span>}
         </div>
         <p className="hint">저장 시 즉시 반영됨. 컨테이너 재시작하면 기본값으로 돌아감</p>
       </div>

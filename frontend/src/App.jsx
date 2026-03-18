@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { Toaster } from './components/ui/sonner'
 import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Logs from './pages/Logs'
@@ -35,6 +36,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      <Toaster position="top-right" />
     </>
   )
 }
