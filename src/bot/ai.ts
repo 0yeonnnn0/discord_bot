@@ -103,15 +103,21 @@ async function getOpenAIReply(history: HistoryMessage[], prompt: string, model: 
 async function getGoogleReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+  const isGemma = (model || "").startsWith("gemma");
+
+  // Gemma doesn't support systemInstruction, inject prompt as first user message instead
   const m = genAI.getGenerativeModel({
     model: model || "gemini-2.5-flash-lite",
-    systemInstruction: prompt,
+    ...(isGemma ? {} : { systemInstruction: prompt }),
   });
 
-  const contents = history.map((msg) => ({
-    role: msg.role === "assistant" ? "model" : "user",
-    parts: [{ text: msg.content }],
-  }));
+  const contents = [
+    ...(isGemma ? [{ role: "user" as const, parts: [{ text: `[시스템 지시]\n${prompt}\n\n위 지시를 따라서 아래 대화에 응답해.` }] }, { role: "model" as const, parts: [{ text: "알겠어." }] }] : []),
+    ...history.map((msg) => ({
+      role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
+      parts: [{ text: msg.content }],
+    })),
+  ];
 
   const result = await m.generateContent({ contents });
   return result.response.text();
