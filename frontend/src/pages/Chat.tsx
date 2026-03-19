@@ -11,6 +11,17 @@ interface Message {
   content: string
 }
 
+const RANDOM_NAMES = [
+  '지나가던시민', '배고픈판다', '졸린고양이', '익명의토끼',
+  '카페인중독자', '야근전사', '치킨마니아', '낮잠요정',
+  '떡볶이킬러', '산책하는곰', '밤올빼미', '라면장인',
+  '귀찮은나무늘보', '호기심대장', '감자튀김도둑',
+]
+
+function getRandomName(): string {
+  return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]
+}
+
 function getSessionId(): string {
   let sid = sessionStorage.getItem('chat-session')
   if (!sid) {
@@ -26,8 +37,9 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [nickname, setNickname] = useState('')
-  const [nicknameSet, setNicknameSet] = useState(false)
+  const [nickname, setNickname] = useState(() => getRandomName())
+  const [editingNickname, setEditingNickname] = useState(false)
+  const [nicknameInput, setNicknameInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -43,8 +55,8 @@ export default function Chat() {
   }, [messages])
 
   useEffect(() => {
-    if (selected && nicknameSet) inputRef.current?.focus()
-  }, [selected, nicknameSet])
+    if (selected) inputRef.current?.focus()
+  }, [selected])
 
   const sendMessage = async () => {
     if (!input.trim() || !selected || loading) return
@@ -62,7 +74,7 @@ export default function Chat() {
           characterId: selected.id,
           message: userMsg,
           sessionId: getSessionId(),
-          nickname: nickname || '익명',
+          nickname,
           history: newMessages.slice(-10),
         }),
       })
@@ -86,7 +98,17 @@ export default function Chat() {
   const goBack = () => {
     setSelected(null)
     setMessages([])
-    setNicknameSet(false)
+  }
+
+  const openNicknameEdit = () => {
+    setNicknameInput(nickname)
+    setEditingNickname(true)
+  }
+
+  const saveNickname = () => {
+    const trimmed = nicknameInput.trim()
+    if (trimmed) setNickname(trimmed)
+    setEditingNickname(false)
   }
 
   // Character select screen
@@ -98,6 +120,25 @@ export default function Chat() {
             <span className="kt-header-title">채팅</span>
           </div>
           <div className="kt-friend-list">
+            {/* My profile */}
+            <div className="kt-section-label">내 프로필</div>
+            <button className="kt-friend-row" onClick={openNicknameEdit}>
+              <div className="kt-profile-pic me">
+                {nickname[0]}
+              </div>
+              <div className="kt-friend-info">
+                <div className="kt-friend-name">{nickname}</div>
+                <div className="kt-friend-status">탭해서 닉네임 변경</div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#bbb', flexShrink: 0 }}>
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            <div className="kt-divider" />
+
+            {/* Characters */}
             <div className="kt-section-label">캐릭터 {characters.length}</div>
             {characters.map(c => (
               <button key={c.id} className="kt-friend-row" onClick={() => setSelected(c)}>
@@ -111,47 +152,29 @@ export default function Chat() {
               </button>
             ))}
           </div>
-        </div>
-      </div>
-    )
-  }
 
-  // Nickname input
-  if (!nicknameSet) {
-    return (
-      <div className="kt-page">
-        <div className="kt-container">
-          <div className="kt-header">
-            <button className="kt-back-btn" onClick={goBack}>
-              <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-            <span className="kt-header-title">{selected.name}</span>
-          </div>
-          <div className="kt-nickname-screen">
-            <div className="kt-profile-pic large">{selected.name[0]}</div>
-            <div className="kt-nickname-label">{selected.name}와(과) 대화하기</div>
-            <div className="kt-nickname-sub">닉네임을 입력해주세요</div>
-            <form
-              className="kt-nickname-form"
-              onSubmit={e => {
-                e.preventDefault()
-                if (nickname.trim()) setNicknameSet(true)
-              }}
-            >
-              <input
-                type="text"
-                value={nickname}
-                onChange={e => setNickname(e.target.value)}
-                placeholder="닉네임"
-                autoFocus
-                maxLength={20}
-                className="kt-nickname-input"
-              />
-              <button type="submit" className="kt-start-btn" disabled={!nickname.trim()}>
-                대화 시작
-              </button>
-            </form>
-          </div>
+          {/* Nickname edit modal */}
+          {editingNickname && (
+            <div className="kt-modal-overlay" onClick={() => setEditingNickname(false)}>
+              <div className="kt-modal" onClick={e => e.stopPropagation()}>
+                <div className="kt-modal-title">닉네임 변경</div>
+                <input
+                  type="text"
+                  value={nicknameInput}
+                  onChange={e => setNicknameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveNickname() }}
+                  placeholder="닉네임 입력"
+                  autoFocus
+                  maxLength={20}
+                  className="kt-modal-input"
+                />
+                <div className="kt-modal-actions">
+                  <button className="kt-modal-btn cancel" onClick={() => setEditingNickname(false)}>취소</button>
+                  <button className="kt-modal-btn confirm" onClick={saveNickname} disabled={!nicknameInput.trim()}>확인</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -169,7 +192,6 @@ export default function Chat() {
         </div>
 
         <div className="kt-chat-area">
-          {/* Date divider */}
           <div className="kt-date-divider">
             <span>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
           </div>

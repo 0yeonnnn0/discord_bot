@@ -1368,6 +1368,111 @@ input[type="range"] {
 
 .kt-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── My profile ── */
+.kt-profile-pic.me {
+  background: #b2dfdb;
+  color: #00695c;
+}
+
+.kt-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 4px 20px;
+}
+
+/* ── Nickname modal ── */
+.kt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: kt-fade-in 0.15s ease-out;
+}
+
+.kt-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: 300px;
+  animation: kt-slide-up 0.2s ease-out;
+}
+
+.kt-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.kt-modal-input {
+  width: 100%;
+  padding: 12px 14px !important;
+  background: #f5f5f5 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 0.95rem !important;
+  color: #1a1a1a !important;
+  text-align: center !important;
+  font-family: var(--font-sans) !important;
+}
+
+.kt-modal-input:focus {
+  background: #efefef !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.kt-modal-input::placeholder {
+  color: #bbb !important;
+}
+
+.kt-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.kt-modal-btn {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.kt-modal-btn.cancel {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.kt-modal-btn.cancel:hover { background: #e5e5e5; }
+
+.kt-modal-btn.confirm {
+  background: #fee500;
+  color: #1a1a1a;
+}
+
+.kt-modal-btn.confirm:hover { background: #fdd800; }
+.kt-modal-btn.confirm:disabled { opacity: 0.35; cursor: not-allowed; }
+
+@keyframes kt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kt-slide-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @layer base {
   * { @apply border-border outline-ring/50; }
   body { @apply bg-background text-foreground; }
