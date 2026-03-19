@@ -403,6 +403,10 @@ export function upsertPreset(id: string, data: Partial<Preset>): void {
 export function togglePreset(id: string, enabled: boolean): boolean {
   if (!presets[id]) return false;
   presets[id].enabled = enabled;
+  // If disabling the active preset, fall back to neko
+  if (!enabled && activePresetId === id) {
+    activePresetId = "neko";
+  }
   savePresets();
   return true;
 }

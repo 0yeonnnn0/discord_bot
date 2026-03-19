@@ -7,7 +7,7 @@ import {
   upsertPreset, deletePreset, togglePreset, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
-import { getReply, callAI, lastUsedModel } from "../../bot/ai";
+import { getReply, callAI, lastUsedModel, DEFAULT_JUDGE_PROMPT } from "../../bot/ai";
 import { getQueueStats } from "../../bot/queue";
 import { addChatLog, getChatLogs, getChatLogStats } from "../chat-logs";
 import fs from "fs";
@@ -37,9 +37,11 @@ router.post("/chat/send", async (req: Request, res: Response) => {
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
-    chatHistory.push({ role: "user" as const, content: `${nickname || "익명"}: ${message}` });
+    const userContent = state.config.webShowNickname ? `${nickname || "익명"}: ${message}` : message;
+    chatHistory.push({ role: "user" as const, content: userContent });
 
-    const prompt = preset.prompt + (preset.userSuffix || "");
+    let prompt = preset.prompt + (preset.userSuffix || "");
+    if (state.config.webSystemPrompt) prompt += "\n\n" + state.config.webSystemPrompt;
     const reply = await callAI(chatHistory, prompt);
 
     // Log the chat
@@ -71,7 +73,7 @@ router.get("/status", (_req: Request, res: Response) => {
   });
 });
 
-router.get("/config", (_req: Request, res: Response) => res.json(state.config));
+router.get("/config", (_req: Request, res: Response) => res.json({ ...state.config, defaultJudgePrompt: DEFAULT_JUDGE_PROMPT }));
 
 router.put("/config", (req: Request, res: Response) => {
   const { aiProvider, model, replyMode, judgeInterval, judgeThreshold } = req.body;
@@ -100,6 +102,12 @@ router.put("/config", (req: Request, res: Response) => {
   }
   if (req.body.judgePrompt !== undefined) {
     state.config.judgePrompt = req.body.judgePrompt;
+  }
+  if (req.body.webShowNickname !== undefined) {
+    state.config.webShowNickname = !!req.body.webShowNickname;
+  }
+  if (req.body.webSystemPrompt !== undefined) {
+    state.config.webSystemPrompt = req.body.webSystemPrompt;
   }
   res.json(state.config);
 });

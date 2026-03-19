@@ -14,7 +14,7 @@ export async function getReply(history: HistoryMessage[], ragContext: string = "
   return callAI(history, prompt);
 }
 
-const DEFAULT_JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
+export const DEFAULT_JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
 아래 대화를 보고, 네가 자연스럽게 끼어들 수 있는 상황이면 답변해.
 끼어드는 게 어색하거나 굳이 필요 없으면 정확히 "<SKIP>"이라고만 답해.
 

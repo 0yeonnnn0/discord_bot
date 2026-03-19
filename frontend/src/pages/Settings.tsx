@@ -36,6 +36,9 @@ export default function Settings() {
   const [judgeInterval, setJudgeInterval] = useState(120)
   const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [judgePrompt, setJudgePrompt] = useState('')
+  const [defaultJudgePrompt, setDefaultJudgePrompt] = useState('')
+  const [webShowNickname, setWebShowNickname] = useState(false)
+  const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -68,6 +71,9 @@ export default function Settings() {
       setJudgeInterval(d.judgeInterval || 120)
       setJudgeThreshold(d.judgeThreshold || 5)
       setJudgePrompt(d.judgePrompt || '')
+      setDefaultJudgePrompt(d.defaultJudgePrompt || '')
+      setWebShowNickname(d.webShowNickname ?? false)
+      setWebSystemPrompt(d.webSystemPrompt || '')
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -272,11 +278,33 @@ export default function Settings() {
         <p className="page-desc">봇 설정을 변경하고 실시간으로 테스트합니다</p>
       </div>
 
-      <div className="command-center">
+      <div className="settings-layout">
+        {/* Sidebar nav */}
+        <nav className="settings-sidebar">
+          {[
+            { id: 'model', label: 'AI Model' },
+            { id: 'reply-mode', label: 'Reply Mode' },
+            { id: 'web-chat', label: 'Web Chat' },
+            { id: 'rag', label: 'RAG Memory' },
+            { id: 'presets', label: 'Presets' },
+            { id: 'live-test', label: 'Live Test' },
+          ].map(s => (
+            <a key={s.id} className="settings-sidebar-link" href={`#${s.id}`}
+              onClick={e => {
+                e.preventDefault()
+                document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}>
+              {s.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="settings-main">
+        <div className="command-center">
         {/* Left Column */}
         <div className="stagger">
           {/* AI Model */}
-          <div className="panel">
+          <div className="panel" id="model">
             <div className="panel-header">
               <span className="panel-title">AI Model</span>
               <button className="btn btn-primary" onClick={saveModel}>Save</button>
@@ -316,7 +344,7 @@ export default function Settings() {
           </div>
 
           {/* Reply Mode */}
-          <div className="panel">
+          <div className="panel" id="reply-mode">
             <div className="panel-header">
               <span className="panel-title">Reply Mode</span>
               <button className="btn btn-primary" onClick={saveReplyMode}>Save</button>
@@ -360,12 +388,12 @@ export default function Settings() {
             {replyMode === 'auto' && (
               <div>
                 <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>AI 판단 프롬프트</div>
-                <textarea rows={10} value={judgePrompt}
+                <textarea rows={12} value={judgePrompt}
                   onChange={e => setJudgePrompt(e.target.value)}
-                  placeholder="비워두면 기본 프롬프트 사용"
+                  placeholder={defaultJudgePrompt || '기본 프롬프트 로딩 중...'}
                   spellCheck={false}
-                  style={{ minHeight: '180px' }} />
-                <p className="form-hint">비워두면 기본 판단 프롬프트 사용. 반드시 &lt;SKIP&gt;을 응답하는 조건을 포함해야 함.</p>
+                  style={{ minHeight: '220px' }} />
+                <p className="form-hint">비워두면 위 placeholder의 기본 프롬프트가 사용됨. 반드시 &lt;SKIP&gt; 응답 조건을 포함해야 함.</p>
               </div>
             )}
             {replyMode === 'mute' && (
@@ -373,8 +401,39 @@ export default function Settings() {
             )}
           </div>
 
+          {/* Web Chat Settings */}
+          <div className="panel" id="web-chat">
+            <div className="panel-header">
+              <span className="panel-title">Web Chat</span>
+              <button className="btn btn-primary" onClick={async () => {
+                const res = await fetch('/api/config', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ webShowNickname, webSystemPrompt }),
+                })
+                res.ok ? toast.success('웹 채팅 설정 저장') : toast.error('저장 실패')
+              }}>Save</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', fontSize: '0.87rem', color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={webShowNickname} onChange={e => setWebShowNickname(e.target.checked)}
+                  style={{ accentColor: 'var(--accent)' }} />
+                AI에게 닉네임 포함해서 보내기
+              </label>
+            </div>
+            <div>
+              <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>웹 채팅 추가 프롬프트</div>
+              <textarea rows={4} value={webSystemPrompt}
+                onChange={e => setWebSystemPrompt(e.target.value)}
+                placeholder="웹 채팅에서만 프리셋 뒤에 추가되는 프롬프트 (선택사항)"
+                spellCheck={false}
+                style={{ minHeight: '80px' }} />
+              <p className="form-hint">프리셋 프롬프트 뒤에 추가됨. 웹 채팅 전용 규칙을 넣을 때 사용.</p>
+            </div>
+          </div>
+
           {/* RAG Memory */}
-          <div className="panel">
+          <div className="panel" id="rag">
             <div className="panel-header">
               <span className="panel-title">RAG Memory</span>
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
@@ -546,7 +605,7 @@ export default function Settings() {
           </div>
 
           {/* Prompt Presets */}
-          <div className="panel">
+          <div className="panel" id="presets">
             <div className="panel-header">
               <span className="panel-title">Prompt Presets</span>
               <button className="btn btn-ghost" onClick={createPreset}
@@ -567,11 +626,6 @@ export default function Settings() {
                     <span className="preset-desc">{p.description}</span>
                   </div>
                   <div className="preset-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <button className="btn btn-ghost"
-                      style={{ padding: '2px 8px', fontSize: '0.65rem' }}
-                      onClick={(e) => { e.stopPropagation(); togglePresetEnabled(p.id, !p.enabled); }}>
-                      {p.enabled ? 'Disable' : 'Enable'}
-                    </button>
                     {p.id === activePresetId ? (
                       <span className="panel-badge green">Active</span>
                     ) : p.enabled ? (
@@ -580,7 +634,9 @@ export default function Settings() {
                         onClick={(e) => { e.stopPropagation(); activatePreset(p.id); }}>
                         Activate
                       </button>
-                    ) : null}
+                    ) : (
+                      <span className="panel-badge" style={{ opacity: 0.5 }}>Disabled</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -649,6 +705,16 @@ export default function Settings() {
                 }}>
                   Save & Activate
                 </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ marginLeft: 'auto', color: editingPreset.enabled ? 'var(--red)' : 'var(--green)' }}
+                  onClick={async () => {
+                    await togglePresetEnabled(editingPreset.id, !editingPreset.enabled)
+                    setEditingPreset({ ...editingPreset, enabled: !editingPreset.enabled })
+                  }}
+                >
+                  {editingPreset.enabled ? 'Disable' : 'Enable'}
+                </button>
               </div>
               <p className="form-hint">Owner Suffix: 주인에게만 추가되는 프롬프트. User Suffix: 일반 유저에게 추가.</p>
             </div>
@@ -656,7 +722,7 @@ export default function Settings() {
         </div>
 
         {/* Right Column: Live Test */}
-        <div className="test-panel">
+        <div className="test-panel" id="live-test">
           <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="panel-header">
               <span className="panel-title">Live Test</span>
@@ -690,6 +756,8 @@ export default function Settings() {
             </div>
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   )

@@ -17,9 +17,9 @@ interface ChannelJudgeState {
 }
 const judgeState = new Map<string, ChannelJudgeState>();
 
-// Auto mode debounce: 1.5s per person
-const AUTO_DEBOUNCE_MS = 1500;
-const autoTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
+// Auto mode: 30s cooldown per channel — wait for conversation to build up
+const AUTO_COOLDOWN_MS = 30 * 1000;
+const autoCooldowns = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const client = new Client({
   intents: [
@@ -119,10 +119,21 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
       return judgeAndReply(channelHistory, ragContext, message.author.id);
     });
 
-    if (!reply) return;
+    const responseTime = Date.now() - startTime;
+
+    if (!reply) {
+      // AI decided to skip — log it
+      const lastLog = state.logs[state.logs.length - 1];
+      if (lastLog) {
+        lastLog.triggerReason = "random";
+        lastLog.botReply = "<SKIP>";
+        lastLog.responseTime = responseTime;
+        lastLog.model = lastUsedModel;
+      }
+      return;
+    }
 
     markUserRequest(message.author.id);
-    const responseTime = Date.now() - startTime;
 
     await message.reply(reply);
     history.addMessage(channelId, { role: "assistant", content: reply });
@@ -197,19 +208,16 @@ client.on("messageCreate", async (message: Message) => {
     // Mute mode → skip entirely
     if (mode === "mute" || isChannelMuted(channelId)) return;
 
-    // Auto mode → AI judges every message (with per-person debounce)
+    // Auto mode → 30s cooldown, then AI judges with full context
     if (mode === "auto") {
-      const existing = autoTimers.get(channelId);
-      if (existing) {
-        if (existing.authorId === message.author.id) {
-          clearTimeout(existing.timer);
-        }
-      }
+      // If timer already running, let it fire — don't reset
+      if (autoCooldowns.has(channelId)) return;
+
       const timer = setTimeout(() => {
-        autoTimers.delete(channelId);
+        autoCooldowns.delete(channelId);
         triggerJudge(channelId, message, channelName, guildName);
-      }, AUTO_DEBOUNCE_MS);
-      autoTimers.set(channelId, { timer, authorId: message.author.id });
+      }, AUTO_COOLDOWN_MS);
+      autoCooldowns.set(channelId, timer);
       return;
     }
 

@@ -69,12 +69,12 @@ export default function Logs() {
                 <TableHead style={{ width: 100 }}>Server</TableHead>
                 <TableHead style={{ width: 100 }}>Channel</TableHead>
                 <TableHead style={{ width: 90 }}>Author</TableHead>
-                <TableHead>Message</TableHead>
+                <TableHead style={{ width: 300 }}>Message</TableHead>
                 <TableHead style={{ width: 60 }}>Trigger</TableHead>
                 <TableHead style={{ width: 50 }}>RAG</TableHead>
                 <TableHead style={{ width: 55 }}>Speed</TableHead>
                 <TableHead style={{ width: 100 }}>Model</TableHead>
-                <TableHead style={{ width: 200 }}>Bot Reply</TableHead>
+                <TableHead style={{ width: 400 }}>Bot Reply</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -112,7 +112,7 @@ export default function Logs() {
                   <TableCell className="mono" style={{ fontSize: '0.7rem', color: log.model ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
                     {log.model || '—'}
                   </TableCell>
-                  <TableCell className="wrap" style={{ color: log.error ? 'var(--red)' : log.botReply ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: '0.83rem' }}>
+                  <TableCell className="wrap" style={{ color: log.error ? 'var(--red)' : log.botReply === '<SKIP>' ? 'var(--text-tertiary)' : log.botReply ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: '0.83rem', fontStyle: log.botReply === '<SKIP>' ? 'italic' : 'normal' }}>
                     {log.error ? `[${log.error}]` : log.botReply || '—'}
                   </TableCell>
                 </TableRow>
@@ -132,7 +132,7 @@ export default function Logs() {
               <TableHead style={{ width: 90 }}>Nickname</TableHead>
               <TableHead>User Message</TableHead>
               <TableHead style={{ width: 100 }}>Model</TableHead>
-              <TableHead style={{ width: 250 }}>Bot Reply</TableHead>
+              <TableHead style={{ width: 350 }}>Bot Reply</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
