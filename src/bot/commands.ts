@@ -44,13 +44,6 @@ export const commands = [
     .setDescription("Show bot status"),
 
   new SlashCommandBuilder()
-    .setName("chance")
-    .setDescription("Set auto-reply chance")
-    .addIntegerOption(opt =>
-      opt.setName("percent").setDescription("0~100").setRequired(true).setMinValue(0).setMaxValue(100)
-    ),
-
-  new SlashCommandBuilder()
     .setName("summary")
     .setDescription("Summarize recent chat messages")
     .addIntegerOption(opt =>
@@ -125,9 +118,6 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "status":
       await handleStatus(interaction);
-      break;
-    case "chance":
-      await handleChance(interaction);
       break;
     case "summary":
       await handleSummary(interaction);
@@ -218,7 +208,7 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
       { name: "Uptime", value: `${h}h ${m}m`, inline: true },
       { name: "Messages", value: `${state.stats.messagesProcessed}`, inline: true },
       { name: "Replies", value: `${state.stats.repliesSent}`, inline: true },
-      { name: "Reply Rate", value: `${Math.round(state.config.replyChance * 100)}%`, inline: true },
+      { name: "Reply Mode", value: "AI 판단", inline: true },
       { name: "Model", value: state.config.model, inline: true },
       { name: "Preset", value: preset?.name || presetId, inline: true },
       { name: "Queue", value: `${queue.activeCount}/${queue.maxConcurrent} active`, inline: true },
@@ -227,13 +217,6 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
   };
 
   await interaction.reply({ embeds: [embed], ephemeral: true });
-}
-
-// ── /확률 ──
-async function handleChance(interaction: ChatInputCommandInteraction): Promise<void> {
-  const percent = interaction.options.getInteger("percent", true);
-  state.config.replyChance = percent / 100;
-  await interaction.reply(`자동 응답 확률 변경: **${percent}%**`);
 }
 
 // ── /summary ──
