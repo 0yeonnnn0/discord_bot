@@ -38,9 +38,9 @@ describe("prompt presets", () => {
   });
 
   it("should switch active preset", () => {
-    const result = setActivePreset("mimic");
+    const result = setActivePreset("yeonnnn");
     expect(result).toBe(true);
-    expect(getActivePresetId()).toBe("mimic");
+    expect(getActivePresetId()).toBe("yeonnnn");
     // Reset
     setActivePreset("neko");
   });
