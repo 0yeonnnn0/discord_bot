@@ -18,11 +18,8 @@ const router = Router();
 
 // ── Public Chat API (no auth required) ──
 router.get("/chat/characters", (_req: Request, res: Response) => {
-  // Return presets that are meant for web chat (mimic and youngjun)
-  const characters = [
-    { id: "mimic", name: "김동연", description: "프론트엔드 개발자, 맨시티 팬, 미국 인턴 경험" },
-    { id: "youngjun", name: "문영준", description: "경제학도, 아스날 팬, 금융권 취업 준비" },
-  ];
+  const all = getPresets();
+  const characters = all.map(p => ({ id: p.id, name: p.name, description: p.description }));
   res.json(characters);
 });
 
