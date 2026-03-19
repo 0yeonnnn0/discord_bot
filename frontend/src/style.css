@@ -329,6 +329,7 @@ h2 {
 }
 
 .panel + .panel { margin-top: var(--space-5); }
+.panel[id] { scroll-margin-top: 72px; }
 
 .panel-header {
   display: flex;
@@ -753,7 +754,7 @@ input[type="range"] {
 
 @media (max-width: 900px) { .command-center { grid-template-columns: 1fr; } }
 
-.test-panel { position: sticky; top: 72px; }
+.test-panel { position: sticky; top: 72px; scroll-margin-top: 72px; }
 
 /* Chat */
 .chat-messages {
