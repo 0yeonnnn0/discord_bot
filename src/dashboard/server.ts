@@ -23,6 +23,10 @@ export function createServer(): express.Application {
     });
 
     app.use("/api", (req, res, next) => {
+      // Public chat endpoints - no auth required
+      if (req.path.startsWith("/chat/characters") || req.path.startsWith("/chat/send")) {
+        return next();
+      }
       const cookieHeader = req.headers.cookie || "";
       const sidMatch = cookieHeader.match(/sid=([^;]+)/);
       if (sidMatch && sessions.has(sidMatch[1])) return next();
