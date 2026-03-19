@@ -7,7 +7,7 @@ import {
   upsertPreset, deletePreset, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
-import { getReply, callAI } from "../../bot/ai";
+import { getReply, callAI, lastUsedModel } from "../../bot/ai";
 import { getQueueStats } from "../../bot/queue";
 import { addChatLog, getChatLogs, getChatLogStats } from "../chat-logs";
 import fs from "fs";
@@ -50,6 +50,7 @@ router.post("/chat/send", async (req: Request, res: Response) => {
       nickname: nickname || "익명",
       userMessage: message,
       botReply: reply,
+      model: lastUsedModel,
     });
 
     res.json({ reply });

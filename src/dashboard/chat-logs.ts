@@ -12,6 +12,7 @@ export interface ChatLogEntry {
   nickname: string;
   userMessage: string;
   botReply: string;
+  model: string;
   timestamp: number;
 }
 

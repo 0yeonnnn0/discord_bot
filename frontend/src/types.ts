@@ -43,6 +43,7 @@ export interface LogEntry {
   responseTime: number | null;
   ragHits: number;
   error: string | null;
+  model: string | null;
 }
 
 export interface EventEntry {
@@ -108,5 +109,6 @@ export interface ChatLogEntry {
   nickname: string;
   userMessage: string;
   botReply: string;
+  model: string;
   timestamp: number;
 }

@@ -5,6 +5,9 @@ import type { HistoryMessage } from "./history";
 
 const FALLBACK_MODEL = "gemma-3-27b-it";
 
+// Tracks which model was actually used in the last callAI invocation
+export let lastUsedModel = "";
+
 export async function getReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string> {
   const basePrompt = buildPromptWithCustom(userId);
   const prompt = ragContext ? basePrompt + ragContext : basePrompt;
@@ -39,6 +42,7 @@ export async function judgeAndReply(history: HistoryMessage[], ragContext: strin
 export async function callAI(history: HistoryMessage[], prompt: string): Promise<string> {
   const provider = state.config.aiProvider;
   const model = state.config.model;
+  lastUsedModel = model;
 
   try {
     switch (provider) {
@@ -55,12 +59,12 @@ export async function callAI(history: HistoryMessage[], prompt: string): Promise
     const msg = (err as Error).message || "";
     const isRetryable = msg.includes("429") || msg.includes("quota") || msg.includes("limit") || msg.includes("500") || msg.includes("503") || msg.includes("overloaded");
 
-    // If the current model is already the fallback, don't retry
     if (!isRetryable || model === FALLBACK_MODEL) throw err;
 
     console.warn(`[AI Fallback] ${provider}/${model} 실패 (${msg.slice(0, 80)}), ${FALLBACK_MODEL}로 재시도`);
     addEvent("ai_fallback", `${provider}/${model} → ${FALLBACK_MODEL}`);
 
+    lastUsedModel = FALLBACK_MODEL;
     return await getGoogleReply(history, prompt, FALLBACK_MODEL);
   }
 }

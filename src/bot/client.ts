@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Message, ChatInputCommandInteraction } from "discord.js";
-import { getReply, judgeAndReply } from "./ai";
+import { getReply, judgeAndReply, lastUsedModel } from "./ai";
 import * as history from "./history";
 import * as rag from "./rag";
 import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
@@ -139,6 +139,7 @@ client.on("messageCreate", async (message: Message) => {
     responseTime: null,
     ragHits: 0,
     error: null,
+    model: null,
   });
 
   // Mentioned → always reply. Otherwise → let AI decide.
@@ -170,6 +171,7 @@ client.on("messageCreate", async (message: Message) => {
         lastLog.triggerReason = "random";
         lastLog.botReply = reply;
         lastLog.responseTime = responseTime;
+        lastLog.model = lastUsedModel;
       }
     } catch (err) {
       const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
@@ -246,6 +248,7 @@ client.on("messageCreate", async (message: Message) => {
       lastLog.botReply = reply;
       lastLog.responseTime = responseTime;
       lastLog.ragHits = ragHitCount;
+      lastLog.model = lastUsedModel;
     }
   } catch (err) {
     const responseTime = Date.now() - startTime;
