@@ -12,6 +12,7 @@ import { state } from "../shared/state";
 import { getQueueStats } from "./queue";
 import { getStats as getRagStats } from "./rag";
 import { generateImage, type ImagenModel } from "./draw";
+import { generateSpeech, VOICES, type VoiceName } from "./tts";
 
 // ── Command Definitions ──
 export const commands = [
@@ -70,6 +71,24 @@ export const commands = [
           { name: "Ultra", value: "ultra" },
         )
     ),
+
+  new SlashCommandBuilder()
+    .setName("say")
+    .setDescription("봇이 음성으로 답변해줘 (TTS)")
+    .addStringOption(opt =>
+      opt.setName("message").setDescription("말할 내용").setRequired(true)
+    )
+    .addStringOption(opt =>
+      opt.setName("voice").setDescription("음성 선택")
+        .addChoices(
+          { name: "Kore (여성, 차분)", value: "kore" },
+          { name: "Aoede (여성, 밝음)", value: "aoede" },
+          { name: "Leda (여성, 따뜻)", value: "leda" },
+          { name: "Puck (남성, 활발)", value: "puck" },
+          { name: "Charon (남성, 낮음)", value: "charon" },
+          { name: "Fenrir (남성, 부드러움)", value: "fenrir" },
+        )
+    ),
 ];
 
 // ── Register Commands ──
@@ -108,6 +127,9 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "draw":
       await handleDraw(interaction);
+      break;
+    case "say":
+      await handleSay(interaction);
       break;
   }
 }
@@ -278,6 +300,36 @@ async function handleDraw(interaction: ChatInputCommandInteraction): Promise<voi
       await interaction.editReply("이미지 생성 쿼터를 초과했어. 내일 다시 시도해봐.");
     } else {
       await interaction.editReply("이미지 생성 실패: " + msg);
+    }
+  }
+}
+
+// ── /say ──
+async function handleSay(interaction: ChatInputCommandInteraction): Promise<void> {
+  const message = interaction.options.getString("message", true);
+  const voice = (interaction.options.getString("voice") || "kore") as VoiceName;
+  await interaction.deferReply();
+
+  try {
+    // First get AI reply in character, then TTS it
+    const h = [{ role: "user" as const, content: `${interaction.user.displayName}: ${message}` }];
+    const textReply = await getReply(h, "", interaction.user.id);
+
+    const attachment = await generateSpeech(textReply, voice);
+    if (attachment) {
+      await interaction.editReply({
+        content: textReply,
+        files: [attachment],
+      });
+    } else {
+      await interaction.editReply(textReply + "\n\n*(음성 생성 실패)*");
+    }
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("429") || msg.includes("quota")) {
+      await interaction.editReply("음성 생성 쿼터를 초과했어. 나중에 다시 시도해봐.");
+    } else {
+      await interaction.editReply("음성 생성 실패: " + msg);
     }
   }
 }
