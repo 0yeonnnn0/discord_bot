@@ -55,6 +55,7 @@ export default function Settings() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [testMsg, setTestMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const fetchPresets = () => {
@@ -742,18 +743,28 @@ export default function Settings() {
           )}
         </div>
 
-        {/* Right Column: Live Test */}
-        <div className="test-panel" id="live-test">
-          <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="panel-header">
-              <span className="panel-title">Live Test</span>
-              {messages.length > 0 && (
-                <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: '0.75rem' }}
-                  onClick={() => setMessages([])}>Clear</button>
-              )}
-            </div>
+      </div>
+      </div>
+      </div>
 
-            <div className="chat-messages">
+      {/* Floating Live Test Chatbot */}
+      <div className={`float-chat ${chatOpen ? 'open' : ''}`}>
+        {!chatOpen ? (
+          <button className="float-chat-fab" onClick={() => setChatOpen(true)}>
+            =^0w0^=
+          </button>
+        ) : (
+          <div className="float-chat-window">
+            <div className="float-chat-header">
+              <span>Live Test</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {messages.length > 0 && (
+                  <button className="float-chat-header-btn" onClick={() => setMessages([])}>Clear</button>
+                )}
+                <button className="float-chat-header-btn" onClick={() => setChatOpen(false)}>✕</button>
+              </div>
+            </div>
+            <div className="float-chat-messages">
               {messages.length === 0 && (
                 <div className="empty" style={{ padding: '3rem 0' }}>
                   <div className="empty-icon">=^0w0^=</div>
@@ -766,8 +777,7 @@ export default function Settings() {
               {loading && <div className="chat-msg bot loading">typing</div>}
               <div ref={chatEndRef} />
             </div>
-
-            <div className="chat-input-row">
+            <div className="float-chat-input">
               <input type="text" value={testMsg}
                 onChange={e => setTestMsg(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendTest()}
@@ -776,9 +786,7 @@ export default function Settings() {
                 disabled={loading || !testMsg.trim()}>Send</button>
             </div>
           </div>
-        </div>
-      </div>
-      </div>
+        )}
       </div>
     </div>
   )
