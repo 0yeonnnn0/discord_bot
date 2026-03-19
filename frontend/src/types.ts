@@ -99,3 +99,14 @@ export interface TimelineEntry {
   stored: number;
   hits: number;
 }
+
+export interface ChatLogEntry {
+  id: string;
+  sessionId: string;
+  characterId: string;
+  characterName: string;
+  nickname: string;
+  userMessage: string;
+  botReply: string;
+  timestamp: number;
+}

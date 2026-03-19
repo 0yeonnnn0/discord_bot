@@ -5,6 +5,35 @@ import type { HistoryMessage } from "./history";
 export async function getReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string> {
   const basePrompt = buildPromptWithCustom(userId);
   const prompt = ragContext ? basePrompt + ragContext : basePrompt;
+  return callAI(history, prompt);
+}
+
+const JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
+아래 대화를 보고, 네가 자연스럽게 끼어들 수 있는 상황이면 답변해.
+끼어드는 게 어색하거나 굳이 필요 없으면 정확히 "<SKIP>"이라고만 답해.
+
+끼어들면 좋은 상황:
+- 너에 대한 이야기가 나올 때
+- 네가 알만한 주제로 대화할 때
+- 재밌는 드립을 칠 수 있을 때
+- 누군가 질문을 던졌는데 아무도 안 답할 때
+- 분위기가 심심해 보일 때
+
+끼어들지 말아야 할 상황:
+- 둘이서 진지한 대화 중일 때
+- 이미 대화가 잘 흘러가고 있을 때
+- 맥락을 모르는 대화일 때
+- 방금 네가 이미 말한 직후일 때`;
+
+export async function judgeAndReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string | null> {
+  const basePrompt = buildPromptWithCustom(userId);
+  const prompt = JUDGE_PROMPT + "\n\n" + basePrompt + (ragContext || "");
+  const reply = await callAI(history, prompt);
+  if (reply.trim() === "<SKIP>") return null;
+  return reply;
+}
+
+async function callAI(history: HistoryMessage[], prompt: string): Promise<string> {
   const provider = state.config.aiProvider;
   const model = state.config.model;
 

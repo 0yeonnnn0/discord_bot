@@ -18,7 +18,7 @@ export default function Nav() {
         TORO
       </div>
       <div className="nav-links">
-        <NavLink to="/admin">Overview</NavLink>
+        <NavLink to="/admin" end>Overview</NavLink>
         <NavLink to="/admin/logs">Logs</NavLink>
         <NavLink to="/admin/settings">Settings</NavLink>
       </div>

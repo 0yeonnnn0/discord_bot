@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table'
-import type { LogEntry, EventEntry, ErrorEntry } from '../types'
+import type { LogEntry, EventEntry, ErrorEntry, ChatLogEntry } from '../types'
 
 export default function Logs() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [events, setEvents] = useState<EventEntry[]>([])
   const [errors, setErrors] = useState<ErrorEntry[]>([])
+  const [chatLogs, setChatLogs] = useState<ChatLogEntry[]>([])
   const [filter, setFilter] = useState('')
   const [tab, setTab] = useState('messages')
 
@@ -13,6 +14,7 @@ export default function Logs() {
     fetch('/api/logs').then(r => r.json()).then(data => setLogs(data.reverse()))
     fetch('/api/events').then(r => r.json()).then(setEvents)
     fetch('/api/errors').then(r => r.json()).then(setErrors)
+    fetch('/api/chat-logs?limit=200').then(r => r.json()).then(setChatLogs).catch(() => {})
   }
 
   useEffect(() => {
@@ -34,14 +36,15 @@ export default function Logs() {
       {/* Tab Switcher */}
       <div className="log-controls">
         <div className="nav-links" style={{ gap: '2px' }}>
-          {['messages', 'events', 'errors'].map(t => (
+          {['messages', 'web-chat', 'events', 'errors'].map(t => (
             <a key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}
               style={{ cursor: 'pointer' }}>
-              {t === 'messages' ? `Messages` :
-               t === 'events' ? `Events` :
-               `Errors`}
+              {t === 'messages' ? 'Messages' :
+               t === 'web-chat' ? 'Web Chat' :
+               t === 'events' ? 'Events' :
+               'Errors'}
               <span className="mono" style={{ marginLeft: 6, fontSize: '0.7rem', opacity: 0.5 }}>
-                {t === 'messages' ? logs.length : t === 'events' ? events.length : errors.length}
+                {t === 'messages' ? logs.length : t === 'web-chat' ? chatLogs.length : t === 'events' ? events.length : errors.length}
               </span>
             </a>
           ))}
@@ -113,6 +116,42 @@ export default function Logs() {
             </TableBody>
           </Table>
         </>
+      )}
+
+      {/* Web Chat Tab */}
+      {tab === 'web-chat' && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead style={{ width: 80 }}>Time</TableHead>
+              <TableHead style={{ width: 90 }}>Character</TableHead>
+              <TableHead style={{ width: 90 }}>Nickname</TableHead>
+              <TableHead>User Message</TableHead>
+              <TableHead style={{ width: 250 }}>Bot Reply</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {chatLogs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
+                  웹 채팅 로그가 없습니다
+                </TableCell>
+              </TableRow>
+            ) : chatLogs.map((log) => (
+              <TableRow key={log.id} className="row-replied">
+                <TableCell className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                  {new Date(log.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </TableCell>
+                <TableCell>
+                  <span className="log-badge mention">{log.characterName}</span>
+                </TableCell>
+                <TableCell style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.nickname}</TableCell>
+                <TableCell className="wrap" style={{ color: 'var(--text-primary)' }}>{log.userMessage}</TableCell>
+                <TableCell className="wrap" style={{ color: 'var(--accent)', fontSize: '0.83rem' }}>{log.botReply}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {/* Events Tab */}

@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Message, ChatInputCommandInteraction } from "discord.js";
-import { getReply } from "./ai";
+import { getReply, judgeAndReply } from "./ai";
 import * as history from "./history";
 import * as rag from "./rag";
 import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
@@ -127,29 +127,67 @@ client.on("messageCreate", async (message: Message) => {
   }
 
   const isMentioned = message.mentions.has(client.user!);
-  const shouldReply = isMentioned || Math.random() < state.config.replyChance;
-  const triggerReason: "mention" | "random" | null = isMentioned ? "mention" : shouldReply ? "random" : null;
-
-  trackUser(message.author.id, message.author.displayName, shouldReply);
 
   addLog({
     guild: guildName,
     channel: channelName,
     author: message.author.displayName,
     content: cleanContent,
-    botReplied: shouldReply,
-    triggerReason,
+    botReplied: false,
+    triggerReason: null,
     botReply: null,
     responseTime: null,
     ragHits: 0,
     error: null,
   });
 
-  if (!shouldReply) return;
-  if (!isMentioned && !canUserRequest(message.author.id)) return;
+  // Mentioned → always reply. Otherwise → let AI decide.
+  if (!isMentioned) {
+    if (!canUserRequest(message.author.id)) return;
+
+    const startTime = Date.now();
+    try {
+      const reply = await enqueue(async () => {
+        const channelHistory = history.getHistory(channelId);
+        const ragResults = await rag.searchRelevant(cleanContent);
+        const ragContext = rag.formatContext(ragResults);
+        return judgeAndReply(channelHistory, ragContext, message.author.id);
+      });
+
+      if (!reply) return; // AI decided to skip
+
+      markUserRequest(message.author.id);
+      const responseTime = Date.now() - startTime;
+
+      await message.reply(reply);
+      history.addMessage(channelId, { role: "assistant", content: reply });
+      state.stats.repliesSent++;
+      trackUser(message.author.id, message.author.displayName, true);
+
+      const lastLog = state.logs[state.logs.length - 1];
+      if (lastLog) {
+        lastLog.botReplied = true;
+        lastLog.triggerReason = "random";
+        lastLog.botReply = reply;
+        lastLog.responseTime = responseTime;
+      }
+    } catch (err) {
+      const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
+      addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
+    }
+    return;
+  }
+
+  // ── Mentioned: always reply ──
+  trackUser(message.author.id, message.author.displayName, true);
   markUserRequest(message.author.id);
 
-  // Queue + waiting message
+  const lastLog = state.logs[state.logs.length - 1];
+  if (lastLog) {
+    lastLog.botReplied = true;
+    lastLog.triggerReason = "mention";
+  }
+
   let waitingMsg: Message<boolean> | null = null;
   let waitingCancelled = false;
   let waitingSending = false;
@@ -158,7 +196,7 @@ client.on("messageCreate", async (message: Message) => {
     if (waitingCancelled) return;
     waitingSending = true;
     try {
-      const msg = await message.reply("잠시 기다려달라냥... 0w0");
+      const msg = await message.reply("잠시만...");
       if (waitingCancelled) {
         await msg.delete().catch(() => {});
       } else {
@@ -201,11 +239,9 @@ client.on("messageCreate", async (message: Message) => {
     }
 
     await sendReply(reply);
-
     history.addMessage(channelId, { role: "assistant", content: reply });
     state.stats.repliesSent++;
 
-    const lastLog = state.logs[state.logs.length - 1];
     if (lastLog) {
       lastLog.botReply = reply;
       lastLog.responseTime = responseTime;
@@ -221,17 +257,12 @@ client.on("messageCreate", async (message: Message) => {
       `channel: ${channelName}, guild: ${guildName}`
     );
 
-    const lastLog = state.logs[state.logs.length - 1];
     if (lastLog) {
       lastLog.responseTime = responseTime;
       lastLog.error = isRateLimit ? "rate_limit" : "api_error";
     }
 
-    const errorMsg = isRateLimit
-      ? "오늘은 너무 많이 떠들었다냥... 내일 다시 돌아온다냥! >w<"
-      : "뭔가 고장났다냥... @д@";
-
-    await sendReply(errorMsg).catch(() => {});
+    await sendReply("뭔가 고장났다냥... @д@").catch(() => {});
   }
 });
 
