@@ -10,9 +10,9 @@ import { registerCommands, handleInteraction, handleAutocomplete } from "./comma
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
 
-// Debounce: wait for conversation to settle before AI judges
+// Debounce: wait for same person to finish talking before AI judges
 const DEBOUNCE_MS = 1500;
-const judgeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const judgeTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
 
 export const client = new Client({
   intents: [
@@ -148,11 +148,20 @@ client.on("messageCreate", async (message: Message) => {
 
   // Mentioned → always reply. Otherwise → debounce + let AI decide.
   if (!isMentioned) {
-    // Cancel previous timer for this channel (someone is still talking)
-    const existingTimer = judgeTimers.get(channelId);
-    if (existingTimer) clearTimeout(existingTimer);
+    // Only debounce if same person is still talking (끊어 말하기 대기)
+    // Different person → let previous timer fire immediately, then start new one
+    const existing = judgeTimers.get(channelId);
+    if (existing) {
+      if (existing.authorId === message.author.id) {
+        // Same person still talking → reset timer
+        clearTimeout(existing.timer);
+      } else {
+        // Different person joined → let previous timer run, no reset
+        // (it will fire on its own)
+      }
+    }
 
-    // Wait for conversation to settle, then let AI judge
+    // Wait for this person to finish, then let AI judge
     const timer = setTimeout(async () => {
       judgeTimers.delete(channelId);
       if (!canUserRequest(message.author.id)) return;
@@ -190,7 +199,7 @@ client.on("messageCreate", async (message: Message) => {
       }
     }, DEBOUNCE_MS);
 
-    judgeTimers.set(channelId, timer);
+    judgeTimers.set(channelId, { timer, authorId: message.author.id });
     return;
   }
 
