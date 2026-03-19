@@ -278,11 +278,33 @@ export default function Settings() {
         <p className="page-desc">봇 설정을 변경하고 실시간으로 테스트합니다</p>
       </div>
 
-      <div className="command-center">
+      <div className="settings-layout">
+        {/* Sidebar nav */}
+        <nav className="settings-sidebar">
+          {[
+            { id: 'model', label: 'AI Model' },
+            { id: 'reply-mode', label: 'Reply Mode' },
+            { id: 'web-chat', label: 'Web Chat' },
+            { id: 'rag', label: 'RAG Memory' },
+            { id: 'presets', label: 'Presets' },
+            { id: 'live-test', label: 'Live Test' },
+          ].map(s => (
+            <a key={s.id} className="settings-sidebar-link" href={`#${s.id}`}
+              onClick={e => {
+                e.preventDefault()
+                document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}>
+              {s.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="settings-main">
+        <div className="command-center">
         {/* Left Column */}
         <div className="stagger">
           {/* AI Model */}
-          <div className="panel">
+          <div className="panel" id="model">
             <div className="panel-header">
               <span className="panel-title">AI Model</span>
               <button className="btn btn-primary" onClick={saveModel}>Save</button>
@@ -322,7 +344,7 @@ export default function Settings() {
           </div>
 
           {/* Reply Mode */}
-          <div className="panel">
+          <div className="panel" id="reply-mode">
             <div className="panel-header">
               <span className="panel-title">Reply Mode</span>
               <button className="btn btn-primary" onClick={saveReplyMode}>Save</button>
@@ -380,7 +402,7 @@ export default function Settings() {
           </div>
 
           {/* Web Chat Settings */}
-          <div className="panel">
+          <div className="panel" id="web-chat">
             <div className="panel-header">
               <span className="panel-title">Web Chat</span>
               <button className="btn btn-primary" onClick={async () => {
@@ -411,7 +433,7 @@ export default function Settings() {
           </div>
 
           {/* RAG Memory */}
-          <div className="panel">
+          <div className="panel" id="rag">
             <div className="panel-header">
               <span className="panel-title">RAG Memory</span>
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
@@ -583,7 +605,7 @@ export default function Settings() {
           </div>
 
           {/* Prompt Presets */}
-          <div className="panel">
+          <div className="panel" id="presets">
             <div className="panel-header">
               <span className="panel-title">Prompt Presets</span>
               <button className="btn btn-ghost" onClick={createPreset}
@@ -700,7 +722,7 @@ export default function Settings() {
         </div>
 
         {/* Right Column: Live Test */}
-        <div className="test-panel">
+        <div className="test-panel" id="live-test">
           <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="panel-header">
               <span className="panel-title">Live Test</span>
@@ -734,6 +756,8 @@ export default function Settings() {
             </div>
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   )
