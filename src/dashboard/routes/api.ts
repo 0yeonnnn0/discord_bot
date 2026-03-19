@@ -4,7 +4,7 @@ import { client } from "../../bot/client";
 import { state, getTopKeywords, getUserStatsRanked } from "../../shared/state";
 import {
   getPresets, getPreset, getActivePresetId, setActivePreset,
-  upsertPreset, deletePreset, togglePreset, getActivePrompt,
+  upsertPreset, deletePreset, togglePreset, reorderPresets, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
 import { getReply, callAI, lastUsedModel, DEFAULT_JUDGE_PROMPT } from "../../bot/ai";
@@ -163,6 +163,13 @@ router.post("/presets", (req: Request, res: Response) => {
 
 router.delete("/presets/:id", (req: Request, res: Response) => {
   if (!deletePreset(req.params.id as string)) return res.status(400).json({ error: "프리셋을 찾을 수 없습니다" });
+  res.json({ ok: true });
+});
+
+router.put("/presets/reorder", (req: Request, res: Response) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: "ids 배열 필요" });
+  reorderPresets(ids);
   res.json({ ok: true });
 });
 

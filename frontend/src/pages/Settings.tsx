@@ -41,6 +41,7 @@ export default function Settings() {
   const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
   const [ragStats, setRagStats] = useState<RagStats>({ vectorCount: 0, indexCreated: false })
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
@@ -287,7 +288,6 @@ export default function Settings() {
             { id: 'web-chat', label: 'Web Chat' },
             { id: 'rag', label: 'RAG Memory' },
             { id: 'presets', label: 'Presets' },
-            { id: 'live-test', label: 'Live Test' },
           ].map(s => (
             <a key={s.id} className="settings-sidebar-link" href={`#${s.id}`}
               onClick={e => {
@@ -615,12 +615,33 @@ export default function Settings() {
             </div>
 
             <div className="preset-list">
-              {presets.map(p => (
+              {presets.map((p, i) => (
                 <div
                   key={p.id}
-                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''}`}
+                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''} ${dragIdx === i ? 'dragging' : ''}`}
                   onClick={() => selectPreset(p.id)}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over') }}
+                  onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
+                  onDrop={async e => {
+                    e.currentTarget.classList.remove('drag-over')
+                    if (dragIdx === null || dragIdx === i) return
+                    const reordered = [...presets]
+                    const [moved] = reordered.splice(dragIdx, 1)
+                    reordered.splice(i, 0, moved)
+                    setPresets(reordered)
+                    setDragIdx(null)
+                    await fetch('/api/presets/reorder', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ids: reordered.map(p => p.id) }),
+                    })
+                    toast.success('프리셋 순서 변경')
+                  }}
+                  onDragEnd={() => setDragIdx(null)}
                 >
+                  <span className="preset-drag-handle">⠿</span>
                   <div className="preset-info">
                     <span className="preset-name" style={{ opacity: p.enabled ? 1 : 0.4 }}>{p.name}</span>
                     <span className="preset-desc">{p.description}</span>
