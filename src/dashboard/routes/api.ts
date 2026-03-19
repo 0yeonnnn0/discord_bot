@@ -7,7 +7,7 @@ import {
   upsertPreset, deletePreset, togglePreset, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
-import { getReply, callAI, lastUsedModel } from "../../bot/ai";
+import { getReply, callAI, lastUsedModel, DEFAULT_JUDGE_PROMPT } from "../../bot/ai";
 import { getQueueStats } from "../../bot/queue";
 import { addChatLog, getChatLogs, getChatLogStats } from "../chat-logs";
 import fs from "fs";
@@ -71,7 +71,7 @@ router.get("/status", (_req: Request, res: Response) => {
   });
 });
 
-router.get("/config", (_req: Request, res: Response) => res.json(state.config));
+router.get("/config", (_req: Request, res: Response) => res.json({ ...state.config, defaultJudgePrompt: DEFAULT_JUDGE_PROMPT }));
 
 router.put("/config", (req: Request, res: Response) => {
   const { aiProvider, model, replyMode, judgeInterval, judgeThreshold } = req.body;

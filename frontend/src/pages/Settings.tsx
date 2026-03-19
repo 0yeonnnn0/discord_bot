@@ -36,6 +36,7 @@ export default function Settings() {
   const [judgeInterval, setJudgeInterval] = useState(120)
   const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [judgePrompt, setJudgePrompt] = useState('')
+  const [defaultJudgePrompt, setDefaultJudgePrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -68,6 +69,7 @@ export default function Settings() {
       setJudgeInterval(d.judgeInterval || 120)
       setJudgeThreshold(d.judgeThreshold || 5)
       setJudgePrompt(d.judgePrompt || '')
+      setDefaultJudgePrompt(d.defaultJudgePrompt || '')
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -360,12 +362,12 @@ export default function Settings() {
             {replyMode === 'auto' && (
               <div>
                 <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>AI 판단 프롬프트</div>
-                <textarea rows={10} value={judgePrompt}
+                <textarea rows={12} value={judgePrompt}
                   onChange={e => setJudgePrompt(e.target.value)}
-                  placeholder="비워두면 기본 프롬프트 사용"
+                  placeholder={defaultJudgePrompt || '기본 프롬프트 로딩 중...'}
                   spellCheck={false}
-                  style={{ minHeight: '180px' }} />
-                <p className="form-hint">비워두면 기본 판단 프롬프트 사용. 반드시 &lt;SKIP&gt;을 응답하는 조건을 포함해야 함.</p>
+                  style={{ minHeight: '220px' }} />
+                <p className="form-hint">비워두면 위 placeholder의 기본 프롬프트가 사용됨. 반드시 &lt;SKIP&gt; 응답 조건을 포함해야 함.</p>
               </div>
             )}
             {replyMode === 'mute' && (
@@ -567,11 +569,6 @@ export default function Settings() {
                     <span className="preset-desc">{p.description}</span>
                   </div>
                   <div className="preset-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <button className="btn btn-ghost"
-                      style={{ padding: '2px 8px', fontSize: '0.65rem' }}
-                      onClick={(e) => { e.stopPropagation(); togglePresetEnabled(p.id, !p.enabled); }}>
-                      {p.enabled ? 'Disable' : 'Enable'}
-                    </button>
                     {p.id === activePresetId ? (
                       <span className="panel-badge green">Active</span>
                     ) : p.enabled ? (
@@ -580,7 +577,9 @@ export default function Settings() {
                         onClick={(e) => { e.stopPropagation(); activatePreset(p.id); }}>
                         Activate
                       </button>
-                    ) : null}
+                    ) : (
+                      <span className="panel-badge" style={{ opacity: 0.5 }}>Disabled</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -648,6 +647,16 @@ export default function Settings() {
                   await activatePreset(editingPreset.id)
                 }}>
                   Save & Activate
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ marginLeft: 'auto', color: editingPreset.enabled ? 'var(--red)' : 'var(--green)' }}
+                  onClick={async () => {
+                    await togglePresetEnabled(editingPreset.id, !editingPreset.enabled)
+                    setEditingPreset({ ...editingPreset, enabled: !editingPreset.enabled })
+                  }}
+                >
+                  {editingPreset.enabled ? 'Disable' : 'Enable'}
                 </button>
               </div>
               <p className="form-hint">Owner Suffix: 주인에게만 추가되는 프롬프트. User Suffix: 일반 유저에게 추가.</p>
