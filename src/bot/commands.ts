@@ -89,6 +89,13 @@ export const commands = [
           { name: "Fenrir (남성, 부드러움)", value: "fenrir" },
         )
     ),
+
+  new SlashCommandBuilder()
+    .setName("mute")
+    .setDescription("봇 자동 참여를 일시 정지/해제")
+    .addIntegerOption(opt =>
+      opt.setName("minutes").setDescription("정지 시간 (분, 기본 30분, 0이면 해제)").setMinValue(0).setMaxValue(1440)
+    ),
 ];
 
 // ── Register Commands ──
@@ -130,6 +137,9 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "say":
       await handleSay(interaction);
+      break;
+    case "mute":
+      await handleMute(interaction);
       break;
   }
 }
@@ -332,6 +342,35 @@ async function handleSay(interaction: ChatInputCommandInteraction): Promise<void
       await interaction.editReply("음성 생성 실패: " + msg);
     }
   }
+}
+
+// ── /mute ──
+// channelId → unmute timestamp
+export const mutedChannels = new Map<string, number>();
+
+async function handleMute(interaction: ChatInputCommandInteraction): Promise<void> {
+  const channelId = interaction.channelId;
+  const minutes = interaction.options.getInteger("minutes") ?? 30;
+
+  if (minutes === 0) {
+    mutedChannels.delete(channelId);
+    await interaction.reply("음소거 해제! 다시 대화에 참여할게.");
+    return;
+  }
+
+  const until = Date.now() + minutes * 60 * 1000;
+  mutedChannels.set(channelId, until);
+  await interaction.reply(`${minutes}분간 이 채널에서 조용히 할게. \`/mute 0\`으로 해제 가능.`);
+}
+
+export function isChannelMuted(channelId: string): boolean {
+  const until = mutedChannels.get(channelId);
+  if (!until) return false;
+  if (Date.now() > until) {
+    mutedChannels.delete(channelId);
+    return false;
+  }
+  return true;
 }
 
 // ── Autocomplete ──

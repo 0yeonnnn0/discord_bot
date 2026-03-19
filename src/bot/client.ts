@@ -5,7 +5,7 @@ import * as rag from "./rag";
 import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
 import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
-import { registerCommands, handleInteraction, handleAutocomplete } from "./commands";
+import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted } from "./commands";
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
@@ -148,6 +148,8 @@ client.on("messageCreate", async (message: Message) => {
 
   // Mentioned → always reply. Otherwise → debounce + let AI decide.
   if (!isMentioned) {
+    // Muted channel → skip auto-participation entirely
+    if (isChannelMuted(channelId)) return;
     // Only debounce if same person is still talking (끊어 말하기 대기)
     // Different person → let previous timer fire immediately, then start new one
     const existing = judgeTimers.get(channelId);
