@@ -119,10 +119,21 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
       return judgeAndReply(channelHistory, ragContext, message.author.id);
     });
 
-    if (!reply) return;
+    const responseTime = Date.now() - startTime;
+
+    if (!reply) {
+      // AI decided to skip — log it
+      const lastLog = state.logs[state.logs.length - 1];
+      if (lastLog) {
+        lastLog.triggerReason = "random";
+        lastLog.botReply = "<SKIP>";
+        lastLog.responseTime = responseTime;
+        lastLog.model = lastUsedModel;
+      }
+      return;
+    }
 
     markUserRequest(message.author.id);
-    const responseTime = Date.now() - startTime;
 
     await message.reply(reply);
     history.addMessage(channelId, { role: "assistant", content: reply });
