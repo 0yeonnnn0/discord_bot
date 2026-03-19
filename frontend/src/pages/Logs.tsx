@@ -9,6 +9,8 @@ export default function Logs() {
   const [chatLogs, setChatLogs] = useState<ChatLogEntry[]>([])
   const [filter, setFilter] = useState('')
   const [tab, setTab] = useState('messages')
+  const [page, setPage] = useState(0)
+  const [perPage, setPerPage] = useState(20)
 
   const fetchData = () => {
     fetch('/api/logs').then(r => r.json()).then(data => setLogs(data.reverse()))
@@ -26,6 +28,35 @@ export default function Logs() {
   const channels = [...new Set(logs.map(l => l.channel))]
   const filtered = filter ? logs.filter(l => l.channel === filter) : logs
 
+  // Pagination helper
+  function paginate<T>(items: T[]): { paged: T[]; total: number; totalPages: number } {
+    const total = items.length
+    const totalPages = Math.max(1, Math.ceil(total / perPage))
+    const paged = items.slice(page * perPage, (page + 1) * perPage)
+    return { paged, total, totalPages }
+  }
+
+  const PaginationBar = ({ total, totalPages }: { total: number; totalPages: number }) => (
+    <div className="log-controls" style={{ justifyContent: 'space-between', marginTop: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <span className="hint mono">{total}개 중 {page * perPage + 1}–{Math.min((page + 1) * perPage, total)}</span>
+        <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(0) }}
+          className="model-select" style={{ padding: '2px 8px', fontSize: '0.75rem' }}>
+          <option value={20}>20개</option>
+          <option value={30}>30개</option>
+          <option value={40}>40개</option>
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <button className="btn btn-ghost" style={{ padding: '2px 10px', fontSize: '0.75rem' }}
+          disabled={page === 0} onClick={() => setPage(p => p - 1)}>← 이전</button>
+        <span className="hint mono" style={{ display: 'flex', alignItems: 'center' }}>{page + 1} / {totalPages}</span>
+        <button className="btn btn-ghost" style={{ padding: '2px 10px', fontSize: '0.75rem' }}
+          disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>다음 →</button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="stagger">
       <div className="page-header">
@@ -37,7 +68,7 @@ export default function Logs() {
       <div className="log-controls">
         <div className="nav-links" style={{ gap: '2px' }}>
           {['messages', 'web-chat', 'events', 'errors'].map(t => (
-            <a key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}
+            <a key={t} className={tab === t ? 'active' : ''} onClick={() => { setTab(t); setPage(0) }}
               style={{ cursor: 'pointer' }}>
               {t === 'messages' ? 'Messages' :
                t === 'web-chat' ? 'Web Chat' :
@@ -59,7 +90,7 @@ export default function Logs() {
               <option value="">All Channels</option>
               {channels.map(ch => <option key={ch} value={ch}>#{ch}</option>)}
             </select>
-            <span className="hint mono">{filtered.length} entries</span>
+            <span className="hint mono">{filtered.length}개</span>
           </div>
 
           <Table>
@@ -84,7 +115,7 @@ export default function Logs() {
                     로그가 없습니다
                   </TableCell>
                 </TableRow>
-              ) : filtered.map((log, i) => (
+              ) : paginate(filtered).paged.map((log, i) => (
                 <TableRow
                   key={i}
                   className={log.error ? 'row-error' : log.botReplied ? 'row-replied' : ''}
@@ -119,11 +150,13 @@ export default function Logs() {
               ))}
             </TableBody>
           </Table>
+          {filtered.length > perPage && <PaginationBar total={filtered.length} totalPages={paginate(filtered).totalPages} />}
         </>
       )}
 
       {/* Web Chat Tab */}
       {tab === 'web-chat' && (
+        <>
         <Table>
           <TableHeader>
             <TableRow>
@@ -142,7 +175,7 @@ export default function Logs() {
                   웹 채팅 로그가 없습니다
                 </TableCell>
               </TableRow>
-            ) : chatLogs.map((log) => (
+            ) : paginate(chatLogs).paged.map((log) => (
               <TableRow key={log.id} className="row-replied">
                 <TableCell className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   {new Date(log.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -158,10 +191,13 @@ export default function Logs() {
             ))}
           </TableBody>
         </Table>
+        {chatLogs.length > perPage && <PaginationBar total={chatLogs.length} totalPages={paginate(chatLogs).totalPages} />}
+        </>
       )}
 
       {/* Events Tab */}
       {tab === 'events' && (
+        <>
         <Table>
           <TableHeader>
             <TableRow>
@@ -177,7 +213,7 @@ export default function Logs() {
                   이벤트가 없습니다
                 </TableCell>
               </TableRow>
-            ) : events.map((ev, i) => (
+            ) : paginate(events).paged.map((ev, i) => (
               <TableRow key={i}>
                 <TableCell className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
                   {new Date(ev.timestamp).toLocaleString('ko-KR')}
@@ -190,10 +226,13 @@ export default function Logs() {
             ))}
           </TableBody>
         </Table>
+        {events.length > perPage && <PaginationBar total={events.length} totalPages={paginate(events).totalPages} />}
+        </>
       )}
 
       {/* Errors Tab */}
       {tab === 'errors' && (
+        <>
         <Table>
           <TableHeader>
             <TableRow>
@@ -210,7 +249,7 @@ export default function Logs() {
                   에러가 없습니다
                 </TableCell>
               </TableRow>
-            ) : errors.map((err, i) => (
+            ) : paginate(errors).paged.map((err, i) => (
               <TableRow key={i} className="row-error">
                 <TableCell className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
                   {new Date(err.timestamp).toLocaleString('ko-KR')}
@@ -224,6 +263,8 @@ export default function Logs() {
             ))}
           </TableBody>
         </Table>
+        {errors.length > perPage && <PaginationBar total={errors.length} totalPages={paginate(errors).totalPages} />}
+        </>
       )}
     </div>
   )

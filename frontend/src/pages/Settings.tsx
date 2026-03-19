@@ -755,13 +755,13 @@ export default function Settings() {
           </button>
         ) : (
           <div className="float-chat-window">
-            <div className="float-chat-header">
+            <div className="float-chat-header" onClick={() => setChatOpen(false)} style={{ cursor: 'pointer' }}>
               <span>Live Test</span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {messages.length > 0 && (
-                  <button className="float-chat-header-btn" onClick={() => setMessages([])}>Clear</button>
+                  <button className="float-chat-header-btn" onClick={e => { e.stopPropagation(); setMessages([]) }}>Clear</button>
                 )}
-                <button className="float-chat-header-btn" onClick={() => setChatOpen(false)}>✕</button>
+                <button className="float-chat-header-btn" onClick={e => { e.stopPropagation(); setChatOpen(false) }}>✕</button>
               </div>
             </div>
             <div className="float-chat-messages">
