@@ -515,7 +515,7 @@ h2 {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  width: 70px;
+  width: 90px;
   flex-shrink: 0;
 }
 
@@ -532,6 +532,8 @@ h2 {
   border-radius: 999px;
   background: var(--accent-muted);
   color: var(--accent);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .model-info-badge.fixed {
