@@ -18,46 +18,46 @@ import { generateSpeech, VOICES, type VoiceName } from "./tts";
 export const commands = [
   new SlashCommandBuilder()
     .setName("mode")
-    .setDescription("Manage bot presets")
+    .setDescription("봇 프리셋 관리")
     .addSubcommand(sub =>
-      sub.setName("list").setDescription("Show all presets")
+      sub.setName("list").setDescription("프리셋 목록 보기")
     )
     .addSubcommand(sub =>
-      sub.setName("set").setDescription("Change preset")
+      sub.setName("set").setDescription("프리셋 변경")
         .addStringOption(opt =>
-          opt.setName("preset").setDescription("Preset to activate").setRequired(true).setAutocomplete(true)
+          opt.setName("preset").setDescription("적용할 프리셋").setRequired(true).setAutocomplete(true)
         )
     )
     .addSubcommand(sub =>
-      sub.setName("current").setDescription("Show current preset")
+      sub.setName("current").setDescription("현재 프리셋 확인")
     ),
 
   new SlashCommandBuilder()
     .setName("ask")
-    .setDescription("Ask the bot a question")
+    .setDescription("봇에게 질문하기")
     .addStringOption(opt =>
-      opt.setName("message").setDescription("Your message").setRequired(true)
+      opt.setName("message").setDescription("메시지 내용").setRequired(true)
     ),
 
   new SlashCommandBuilder()
     .setName("status")
-    .setDescription("Show bot status"),
+    .setDescription("봇 상태 확인"),
 
   new SlashCommandBuilder()
     .setName("summary")
-    .setDescription("Summarize recent chat messages")
+    .setDescription("최근 대화 AI 요약")
     .addIntegerOption(opt =>
-      opt.setName("count").setDescription("Number of messages to summarize (default 50)").setMinValue(10).setMaxValue(100)
+      opt.setName("count").setDescription("요약할 메시지 수 (기본 50)").setMinValue(10).setMaxValue(100)
     ),
 
   new SlashCommandBuilder()
     .setName("draw")
-    .setDescription("Generate an image with AI")
+    .setDescription("AI로 이미지 생성")
     .addStringOption(opt =>
-      opt.setName("prompt").setDescription("What to draw").setRequired(true)
+      opt.setName("prompt").setDescription("그릴 내용").setRequired(true)
     )
     .addStringOption(opt =>
-      opt.setName("quality").setDescription("Model quality")
+      opt.setName("quality").setDescription("모델 품질")
         .addChoices(
           { name: "Flash (빠름)", value: "flash" },
           { name: "Pro (고품질)", value: "pro" },
