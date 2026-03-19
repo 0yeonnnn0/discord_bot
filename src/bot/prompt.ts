@@ -371,6 +371,22 @@ export function getPresets(enabledOnly = false): PresetInfo[] {
     }));
 }
 
+export function reorderPresets(orderedIds: string[]): boolean {
+  const reordered: Record<string, Preset> = {};
+  for (const id of orderedIds) {
+    if (presets[id]) reordered[id] = presets[id];
+  }
+  // Append any remaining presets not in the list
+  for (const [id, p] of Object.entries(presets)) {
+    if (!reordered[id]) reordered[id] = p;
+  }
+  // Replace presets object while keeping reference
+  for (const key of Object.keys(presets)) delete presets[key];
+  Object.assign(presets, reordered);
+  savePresets();
+  return true;
+}
+
 export function getPreset(id: string): Preset | null {
   return presets[id] || null;
 }

@@ -41,6 +41,7 @@ export default function Settings() {
   const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
   const [ragStats, setRagStats] = useState<RagStats>({ vectorCount: 0, indexCreated: false })
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
@@ -54,6 +55,7 @@ export default function Settings() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [testMsg, setTestMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const fetchPresets = () => {
@@ -287,7 +289,6 @@ export default function Settings() {
             { id: 'web-chat', label: 'Web Chat' },
             { id: 'rag', label: 'RAG Memory' },
             { id: 'presets', label: 'Presets' },
-            { id: 'live-test', label: 'Live Test' },
           ].map(s => (
             <a key={s.id} className="settings-sidebar-link" href={`#${s.id}`}
               onClick={e => {
@@ -615,12 +616,33 @@ export default function Settings() {
             </div>
 
             <div className="preset-list">
-              {presets.map(p => (
+              {presets.map((p, i) => (
                 <div
                   key={p.id}
-                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''}`}
+                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''} ${dragIdx === i ? 'dragging' : ''}`}
                   onClick={() => selectPreset(p.id)}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over') }}
+                  onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
+                  onDrop={async e => {
+                    e.currentTarget.classList.remove('drag-over')
+                    if (dragIdx === null || dragIdx === i) return
+                    const reordered = [...presets]
+                    const [moved] = reordered.splice(dragIdx, 1)
+                    reordered.splice(i, 0, moved)
+                    setPresets(reordered)
+                    setDragIdx(null)
+                    await fetch('/api/presets/reorder', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ids: reordered.map(p => p.id) }),
+                    })
+                    toast.success('프리셋 순서 변경')
+                  }}
+                  onDragEnd={() => setDragIdx(null)}
                 >
+                  <span className="preset-drag-handle">⠿</span>
                   <div className="preset-info">
                     <span className="preset-name" style={{ opacity: p.enabled ? 1 : 0.4 }}>{p.name}</span>
                     <span className="preset-desc">{p.description}</span>
@@ -721,18 +743,28 @@ export default function Settings() {
           )}
         </div>
 
-        {/* Right Column: Live Test */}
-        <div className="test-panel" id="live-test">
-          <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="panel-header">
-              <span className="panel-title">Live Test</span>
-              {messages.length > 0 && (
-                <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: '0.75rem' }}
-                  onClick={() => setMessages([])}>Clear</button>
-              )}
-            </div>
+      </div>
+      </div>
+      </div>
 
-            <div className="chat-messages">
+      {/* Floating Live Test Chatbot */}
+      <div className={`float-chat ${chatOpen ? 'open' : ''}`}>
+        {!chatOpen ? (
+          <button className="float-chat-fab" onClick={() => setChatOpen(true)}>
+            =^0w0^=
+          </button>
+        ) : (
+          <div className="float-chat-window">
+            <div className="float-chat-header">
+              <span>Live Test</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {messages.length > 0 && (
+                  <button className="float-chat-header-btn" onClick={() => setMessages([])}>Clear</button>
+                )}
+                <button className="float-chat-header-btn" onClick={() => setChatOpen(false)}>✕</button>
+              </div>
+            </div>
+            <div className="float-chat-messages">
               {messages.length === 0 && (
                 <div className="empty" style={{ padding: '3rem 0' }}>
                   <div className="empty-icon">=^0w0^=</div>
@@ -745,8 +777,7 @@ export default function Settings() {
               {loading && <div className="chat-msg bot loading">typing</div>}
               <div ref={chatEndRef} />
             </div>
-
-            <div className="chat-input-row">
+            <div className="float-chat-input">
               <input type="text" value={testMsg}
                 onChange={e => setTestMsg(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendTest()}
@@ -755,9 +786,7 @@ export default function Settings() {
                 disabled={loading || !testMsg.trim()}>Send</button>
             </div>
           </div>
-        </div>
-      </div>
-      </div>
+        )}
       </div>
     </div>
   )
