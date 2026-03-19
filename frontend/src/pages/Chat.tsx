@@ -98,7 +98,7 @@ export default function Chat() {
             <span className="kt-header-title">채팅</span>
           </div>
           <div className="kt-friend-list">
-            <div className="kt-section-label">친구 {characters.length}</div>
+            <div className="kt-section-label">캐릭터 {characters.length}</div>
             {characters.map(c => (
               <button key={c.id} className="kt-friend-row" onClick={() => setSelected(c)}>
                 <div className="kt-profile-pic">
