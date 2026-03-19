@@ -10,21 +10,19 @@ function getAI(): GoogleGenAI {
   return ai;
 }
 
-export type ImagenModel = "fast" | "standard" | "ultra";
+export type ImageModel = "flash" | "pro";
 
-const MODEL_MAP: Record<ImagenModel, string> = {
-  fast: "imagen-4.0-fast-generate-001",
-  standard: "imagen-4.0-generate-001",
-  ultra: "imagen-4.0-ultra-generate-001",
+const MODEL_MAP: Record<ImageModel, string> = {
+  flash: "gemini-2.5-flash",
+  pro: "gemini-2.5-pro",
 };
 
-const FALLBACK_ORDER: ImagenModel[] = ["fast", "standard", "ultra"];
+const FALLBACK_ORDER: ImageModel[] = ["flash", "pro"];
 
 export async function generateImage(
   prompt: string,
-  quality: ImagenModel = "fast"
-): Promise<{ attachment: AttachmentBuilder; usedModel: ImagenModel } | null> {
-  // Build try order: start from requested quality, then try the rest
+  quality: ImageModel = "flash"
+): Promise<{ attachment: AttachmentBuilder; usedModel: ImageModel } | null> {
   const startIdx = FALLBACK_ORDER.indexOf(quality);
   const tryOrder = FALLBACK_ORDER.slice(startIdx);
 
@@ -36,28 +34,29 @@ export async function generateImage(
       const msg = (err as Error).message || "";
       const isRetryable = msg.includes("429") || msg.includes("quota") || msg.includes("limit") || msg.includes("503");
       if (!isRetryable || q === tryOrder[tryOrder.length - 1]) throw err;
-      console.warn(`[Imagen Fallback] ${MODEL_MAP[q]} 실패, ${MODEL_MAP[tryOrder[tryOrder.indexOf(q) + 1]]}로 재시도`);
+      console.warn(`[Image Fallback] ${MODEL_MAP[q]} 실패, ${MODEL_MAP[tryOrder[tryOrder.indexOf(q) + 1]]}로 재시도`);
     }
   }
 
   return null;
 }
 
-async function tryGenerate(prompt: string, quality: ImagenModel): Promise<AttachmentBuilder | null> {
+async function tryGenerate(prompt: string, quality: ImageModel): Promise<AttachmentBuilder | null> {
   const model = MODEL_MAP[quality];
 
-  const response = await getAI().models.generateImages({
+  const response = await getAI().models.generateContent({
     model,
-    prompt,
+    contents: prompt,
     config: {
-      numberOfImages: 1,
+      responseModalities: ["TEXT", "IMAGE"],
     },
   });
 
-  const generated = response.generatedImages?.[0];
-  if (generated?.image?.imageBytes) {
-    const buffer = Buffer.from(generated.image.imageBytes, "base64");
-    return new AttachmentBuilder(buffer, { name: "toro-art.png" });
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData && part.inlineData.mimeType?.startsWith("image/")) {
+      const buffer = Buffer.from(part.inlineData.data!, "base64");
+      return new AttachmentBuilder(buffer, { name: "toro-art.png" });
+    }
   }
 
   return null;

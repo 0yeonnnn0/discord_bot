@@ -11,7 +11,7 @@ import { getReply } from "./ai";
 import { state } from "../shared/state";
 import { getQueueStats } from "./queue";
 import { getStats as getRagStats } from "./rag";
-import { generateImage, type ImagenModel } from "./draw";
+import { generateImage, type ImageModel } from "./draw";
 import { generateSpeech, VOICES, type VoiceName } from "./tts";
 
 // ── Command Definitions ──
@@ -52,16 +52,15 @@ export const commands = [
 
   new SlashCommandBuilder()
     .setName("draw")
-    .setDescription("Generate an image with AI (Imagen 4)")
+    .setDescription("Generate an image with AI")
     .addStringOption(opt =>
       opt.setName("prompt").setDescription("What to draw").setRequired(true)
     )
     .addStringOption(opt =>
-      opt.setName("quality").setDescription("Image quality")
+      opt.setName("quality").setDescription("Model quality")
         .addChoices(
-          { name: "Fast", value: "fast" },
-          { name: "Standard", value: "standard" },
-          { name: "Ultra", value: "ultra" },
+          { name: "Flash (빠름)", value: "flash" },
+          { name: "Pro (고품질)", value: "pro" },
         )
     ),
 
@@ -273,7 +272,7 @@ ${chatLog}`;
 // ── /draw ──
 async function handleDraw(interaction: ChatInputCommandInteraction): Promise<void> {
   const prompt = interaction.options.getString("prompt", true);
-  const quality = (interaction.options.getString("quality") || "fast") as ImagenModel;
+  const quality = (interaction.options.getString("quality") || "flash") as ImageModel;
   await interaction.deferReply();
 
   try {

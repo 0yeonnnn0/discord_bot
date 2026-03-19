@@ -285,7 +285,7 @@ export default function Settings() {
               </div>
               <div className="model-info-item">
                 <span className="model-info-label">Image</span>
-                <span className="model-info-value mono">Imagen 4 (fast / standard / ultra)</span>
+                <span className="model-info-value mono">Gemini 2.5 (flash / pro)</span>
                 <span className="model-info-badge fixed">/draw</span>
               </div>
               <div className="model-info-item">
