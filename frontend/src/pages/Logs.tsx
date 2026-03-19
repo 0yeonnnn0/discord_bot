@@ -74,7 +74,7 @@ export default function Logs() {
                 <TableHead style={{ width: 50 }}>RAG</TableHead>
                 <TableHead style={{ width: 55 }}>Speed</TableHead>
                 <TableHead style={{ width: 100 }}>Model</TableHead>
-                <TableHead style={{ width: 200 }}>Bot Reply</TableHead>
+                <TableHead style={{ width: 350 }}>Bot Reply</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,7 +132,7 @@ export default function Logs() {
               <TableHead style={{ width: 90 }}>Nickname</TableHead>
               <TableHead>User Message</TableHead>
               <TableHead style={{ width: 100 }}>Model</TableHead>
-              <TableHead style={{ width: 250 }}>Bot Reply</TableHead>
+              <TableHead style={{ width: 350 }}>Bot Reply</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
