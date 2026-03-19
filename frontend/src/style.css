@@ -366,7 +366,7 @@ h2 {
   background: var(--bg-card);
 }
 
-.toro-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.toro-table { width: 100%; min-width: 1200px; border-collapse: collapse; font-size: 0.85rem; }
 .toro-thead { position: sticky; top: 0; z-index: 2; }
 
 .toro-th {
