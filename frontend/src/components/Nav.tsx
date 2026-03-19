@@ -14,13 +14,13 @@ export default function Nav() {
   return (
     <nav>
       <div className="nav-brand">
-        <span className={`dot`} style={{ background: online ? 'var(--green)' : 'var(--red)', boxShadow: online ? '0 0 8px rgba(35,165,89,0.5)' : 'none' }} />
+        <span className="dot" style={{ background: online ? 'var(--green)' : 'var(--red)', boxShadow: online ? '0 0 8px rgba(35,165,89,0.5)' : 'none' }} />
         TORO
       </div>
       <div className="nav-links">
-        <NavLink to="/">Overview</NavLink>
-        <NavLink to="/logs">Logs</NavLink>
-        <NavLink to="/settings">Settings</NavLink>
+        <NavLink to="/admin">Overview</NavLink>
+        <NavLink to="/admin/logs">Logs</NavLink>
+        <NavLink to="/admin/settings">Settings</NavLink>
       </div>
     </nav>
   )

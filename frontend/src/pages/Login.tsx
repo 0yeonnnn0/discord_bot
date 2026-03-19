@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Toaster } from '../components/ui/sonner'
 
-export default function Login({ onSuccess }: { onSuccess: () => void }) {
+export default function Login() {
   const [password, setPassword] = useState('')
   const [shaking, setShaking] = useState(false)
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -14,7 +16,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
       body: JSON.stringify({ password }),
     })
     if (res.ok) {
-      onSuccess()
+      navigate('/admin')
     } else {
       toast.error('Wrong password')
       setPassword('')
