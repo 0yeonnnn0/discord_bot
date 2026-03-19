@@ -17,6 +17,7 @@ const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: 'gemma-3-27b-it', label: 'Gemma 3 27B (Fallback)' },
     { value: 'gemma-3-12b-it', label: 'Gemma 3 12B' },
     { value: 'gemma-3-4b-it', label: 'Gemma 3 4B' },
+    { value: 'gemma-3-1b-it', label: 'Gemma 3 1B' },
   ],
   openai: [
     { value: 'gpt-4o', label: 'GPT-4o' },
