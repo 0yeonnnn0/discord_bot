@@ -1,6 +1,9 @@
 import { buildPromptWithCustom } from "./prompt";
 import { state } from "../shared/state";
+import { addEvent } from "../shared/state";
 import type { HistoryMessage } from "./history";
+
+const FALLBACK_MODEL = "gemma-3-27b-it";
 
 export async function getReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string> {
   const basePrompt = buildPromptWithCustom(userId);
@@ -33,19 +36,32 @@ export async function judgeAndReply(history: HistoryMessage[], ragContext: strin
   return reply;
 }
 
-async function callAI(history: HistoryMessage[], prompt: string): Promise<string> {
+export async function callAI(history: HistoryMessage[], prompt: string): Promise<string> {
   const provider = state.config.aiProvider;
   const model = state.config.model;
 
-  switch (provider) {
-    case "anthropic":
-      return getAnthropicReply(history, prompt, model);
-    case "openai":
-      return getOpenAIReply(history, prompt, model);
-    case "google":
-      return getGoogleReply(history, prompt, model);
-    default:
-      throw new Error(`지원하지 않는 AI_PROVIDER: ${provider}`);
+  try {
+    switch (provider) {
+      case "anthropic":
+        return await getAnthropicReply(history, prompt, model);
+      case "openai":
+        return await getOpenAIReply(history, prompt, model);
+      case "google":
+        return await getGoogleReply(history, prompt, model);
+      default:
+        throw new Error(`지원하지 않는 AI_PROVIDER: ${provider}`);
+    }
+  } catch (err) {
+    const msg = (err as Error).message || "";
+    const isRetryable = msg.includes("429") || msg.includes("quota") || msg.includes("limit") || msg.includes("500") || msg.includes("503") || msg.includes("overloaded");
+
+    // If the current model is already the fallback, don't retry
+    if (!isRetryable || model === FALLBACK_MODEL) throw err;
+
+    console.warn(`[AI Fallback] ${provider}/${model} 실패 (${msg.slice(0, 80)}), ${FALLBACK_MODEL}로 재시도`);
+    addEvent("ai_fallback", `${provider}/${model} → ${FALLBACK_MODEL}`);
+
+    return await getGoogleReply(history, prompt, FALLBACK_MODEL);
   }
 }
 

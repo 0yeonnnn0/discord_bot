@@ -20,12 +20,14 @@
     "express": "^4.21.2",
     "multer": "^2.1.1",
     "openai": "^6.32.0",
-    "vectra": "^0.12.3"
+    "vectra": "^0.12.3",
+    "wav": "^1.0.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
+    "@types/wav": "^1.0.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
