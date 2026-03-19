@@ -295,19 +295,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Reply Chance */}
-          <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">Reply Chance</span>
-              <button className="btn btn-primary" onClick={saveChance}>Save</button>
-            </div>
-            <div className="slider-row">
-              <input type="range" min="0" max="100" value={chance}
-                onChange={e => setChance(Number(e.target.value))} />
-              <span className="slider-value">{chance}%</span>
-            </div>
-          </div>
-
           {/* RAG Memory */}
           <div className="panel">
             <div className="panel-header">

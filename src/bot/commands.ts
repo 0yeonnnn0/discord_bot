@@ -44,13 +44,6 @@ export const commands = [
     .setDescription("Show bot status"),
 
   new SlashCommandBuilder()
-    .setName("chance")
-    .setDescription("Set auto-reply chance")
-    .addIntegerOption(opt =>
-      opt.setName("percent").setDescription("0~100").setRequired(true).setMinValue(0).setMaxValue(100)
-    ),
-
-  new SlashCommandBuilder()
     .setName("summary")
     .setDescription("Summarize recent chat messages")
     .addIntegerOption(opt =>
@@ -125,9 +118,6 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "status":
       await handleStatus(interaction);
-      break;
-    case "chance":
-      await handleChance(interaction);
       break;
     case "summary":
       await handleSummary(interaction);
@@ -218,7 +208,7 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
       { name: "Uptime", value: `${h}h ${m}m`, inline: true },
       { name: "Messages", value: `${state.stats.messagesProcessed}`, inline: true },
       { name: "Replies", value: `${state.stats.repliesSent}`, inline: true },
-      { name: "Reply Rate", value: `${Math.round(state.config.replyChance * 100)}%`, inline: true },
+      { name: "Reply Mode", value: "AI 판단", inline: true },
       { name: "Model", value: state.config.model, inline: true },
       { name: "Preset", value: preset?.name || presetId, inline: true },
       { name: "Queue", value: `${queue.activeCount}/${queue.maxConcurrent} active`, inline: true },
@@ -227,13 +217,6 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
   };
 
   await interaction.reply({ embeds: [embed], ephemeral: true });
-}
-
-// ── /확률 ──
-async function handleChance(interaction: ChatInputCommandInteraction): Promise<void> {
-  const percent = interaction.options.getInteger("percent", true);
-  state.config.replyChance = percent / 100;
-  await interaction.reply(`자동 응답 확률 변경: **${percent}%**`);
 }
 
 // ── /summary ──
@@ -283,7 +266,7 @@ ${chatLog}`;
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
-    await interaction.editReply("요약 실패: " + (err as Error).message);
+    await interaction.editReply("요약하다가 고장났다냥... @д@ " + (err as Error).message);
   }
 }
 
@@ -302,14 +285,14 @@ async function handleDraw(interaction: ChatInputCommandInteraction): Promise<voi
         files: [result.attachment],
       });
     } else {
-      await interaction.editReply("이미지 생성에 실패했어. 다른 프롬프트로 다시 시도해봐.");
+      await interaction.editReply("이미지 생성에 실패했다냥... 다른 프롬프트로 다시 해보라냥 @д@");
     }
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("429") || msg.includes("quota")) {
-      await interaction.editReply("이미지 생성 쿼터를 초과했어. 내일 다시 시도해봐.");
+      await interaction.editReply("오늘은 그림을 너무 많이 그렸다냥... 내일 다시 오라냥! >w<");
     } else {
-      await interaction.editReply("이미지 생성 실패: " + msg);
+      await interaction.editReply("그림 그리다가 뭔가 고장났다냥... @д@ " + msg);
     }
   }
 }
@@ -332,14 +315,14 @@ async function handleSay(interaction: ChatInputCommandInteraction): Promise<void
         files: [attachment],
       });
     } else {
-      await interaction.editReply(textReply + "\n\n*(음성 생성 실패)*");
+      await interaction.editReply(textReply + "\n\n*목소리가 안 나온다냥... @д@*");
     }
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("429") || msg.includes("quota")) {
-      await interaction.editReply("음성 생성 쿼터를 초과했어. 나중에 다시 시도해봐.");
+      await interaction.editReply("오늘은 목이 너무 아프다냥... 내일 다시 말해준다냥! >w<");
     } else {
-      await interaction.editReply("음성 생성 실패: " + msg);
+      await interaction.editReply("목소리 내다가 고장났다냥... @д@ " + msg);
     }
   }
 }
@@ -354,13 +337,13 @@ async function handleMute(interaction: ChatInputCommandInteraction): Promise<voi
 
   if (minutes === 0) {
     mutedChannels.delete(channelId);
-    await interaction.reply("음소거 해제! 다시 대화에 참여할게.");
+    await interaction.reply("음소거 해제다냥! 다시 떠들어준다냥 >w<");
     return;
   }
 
   const until = Date.now() + minutes * 60 * 1000;
   mutedChannels.set(channelId, until);
-  await interaction.reply(`${minutes}분간 이 채널에서 조용히 할게. \`/mute 0\`으로 해제 가능.`);
+  await interaction.reply(`${minutes}분간 입 다물고 있겠다냥... \`/mute 0\` 하면 다시 말해준다냥 0w0`);
 }
 
 export function isChannelMuted(channelId: string): boolean {
