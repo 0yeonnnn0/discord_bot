@@ -43,9 +43,7 @@ export default function Chat() {
   }, [messages])
 
   useEffect(() => {
-    if (selected && nicknameSet) {
-      inputRef.current?.focus()
-    }
+    if (selected && nicknameSet) inputRef.current?.focus()
   }, [selected, nicknameSet])
 
   const sendMessage = async () => {
@@ -94,44 +92,47 @@ export default function Chat() {
   // Character select screen
   if (!selected) {
     return (
-      <div className="chat-page">
-        <div className="chat-container">
-          <div className="chat-select-screen">
-            <div className="chat-logo">TORO</div>
-            <p className="chat-subtitle">대화할 캐릭터를 골라봐</p>
-            <div className="chat-character-list">
-              {characters.map(c => (
-                <button
-                  key={c.id}
-                  className="chat-character-card"
-                  onClick={() => setSelected(c)}
-                >
-                  <div className="chat-character-avatar">
-                    {c.name[0]}
-                  </div>
-                  <div className="chat-character-info">
-                    <div className="chat-character-name">{c.name}</div>
-                    <div className="chat-character-desc">{c.description}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
+      <div className="kt-page">
+        <div className="kt-container">
+          <div className="kt-header">
+            <span className="kt-header-title">채팅</span>
+          </div>
+          <div className="kt-friend-list">
+            <div className="kt-section-label">친구 {characters.length}</div>
+            {characters.map(c => (
+              <button key={c.id} className="kt-friend-row" onClick={() => setSelected(c)}>
+                <div className="kt-profile-pic">
+                  {c.name[0]}
+                </div>
+                <div className="kt-friend-info">
+                  <div className="kt-friend-name">{c.name}</div>
+                  <div className="kt-friend-status">{c.description}</div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </div>
     )
   }
 
-  // Nickname input screen
+  // Nickname input
   if (!nicknameSet) {
     return (
-      <div className="chat-page">
-        <div className="chat-container">
-          <div className="chat-select-screen">
-            <div className="chat-logo">{selected.name}</div>
-            <p className="chat-subtitle">닉네임을 알려줘</p>
+      <div className="kt-page">
+        <div className="kt-container">
+          <div className="kt-header">
+            <button className="kt-back-btn" onClick={goBack}>
+              <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <span className="kt-header-title">{selected.name}</span>
+          </div>
+          <div className="kt-nickname-screen">
+            <div className="kt-profile-pic large">{selected.name[0]}</div>
+            <div className="kt-nickname-label">{selected.name}와(과) 대화하기</div>
+            <div className="kt-nickname-sub">닉네임을 입력해주세요</div>
             <form
-              className="chat-nickname-form"
+              className="kt-nickname-form"
               onSubmit={e => {
                 e.preventDefault()
                 if (nickname.trim()) setNicknameSet(true)
@@ -141,17 +142,13 @@ export default function Chat() {
                 type="text"
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
-                placeholder="닉네임 입력"
+                placeholder="닉네임"
                 autoFocus
                 maxLength={20}
-                className="chat-nickname-input"
+                className="kt-nickname-input"
               />
-              <button
-                type="submit"
-                className="chat-nickname-btn"
-                disabled={!nickname.trim()}
-              >
-                시작
+              <button type="submit" className="kt-start-btn" disabled={!nickname.trim()}>
+                대화 시작
               </button>
             </form>
           </div>
@@ -162,69 +159,95 @@ export default function Chat() {
 
   // Chat screen
   return (
-    <div className="chat-page">
-      <div className="chat-container">
-        {/* Header */}
-        <div className="chat-header">
-          <button className="chat-back-btn" onClick={goBack}>←</button>
-          <div className="chat-header-info">
-            <span className="chat-header-name">{selected.name}</span>
-          </div>
+    <div className="kt-page">
+      <div className="kt-container">
+        <div className="kt-header chat">
+          <button className="kt-back-btn" onClick={goBack}>
+            <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span className="kt-header-title">{selected.name}</span>
         </div>
 
-        {/* Messages */}
-        <div className="chat-messages-area">
-          {messages.length === 0 && (
-            <div className="chat-empty">
-              <span>{selected.name}에게 말을 걸어봐!</span>
-            </div>
-          )}
-          {messages.map((m, i) => (
-            <div key={i} className={`chat-bubble ${m.role}`}>
-              {m.role === 'assistant' && (
-                <div className="chat-bubble-name">{selected.name}</div>
-              )}
-              <div className="chat-bubble-content">
-                {m.content.split('\n').map((line, j) => (
-                  <span key={j}>
-                    {line}
-                    {j < m.content.split('\n').length - 1 && <br />}
-                  </span>
-                ))}
+        <div className="kt-chat-area">
+          {/* Date divider */}
+          <div className="kt-date-divider">
+            <span>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
+          </div>
+
+          {messages.map((m, i) => {
+            const isUser = m.role === 'user'
+            const showProfile = !isUser && (i === 0 || messages[i - 1]?.role === 'user')
+            const isConsecutive = !isUser && i > 0 && messages[i - 1]?.role === 'assistant'
+
+            return (
+              <div key={i} className={`kt-msg ${isUser ? 'sent' : 'received'}`}>
+                {!isUser && (
+                  <div className="kt-msg-profile-col">
+                    {showProfile && (
+                      <div className="kt-profile-pic small">{selected.name[0]}</div>
+                    )}
+                  </div>
+                )}
+                <div className="kt-msg-body">
+                  {!isUser && showProfile && (
+                    <div className="kt-msg-sender">{selected.name}</div>
+                  )}
+                  <div className={`kt-msg-row ${isUser ? 'sent' : 'received'}`}>
+                    <div className={`kt-bubble ${isUser ? 'sent' : 'received'} ${isConsecutive && !showProfile ? 'consecutive' : ''}`}>
+                      {m.content.split('\n').map((line, j) => (
+                        <span key={j}>
+                          {line}
+                          {j < m.content.split('\n').length - 1 && <br />}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
+
           {loading && (
-            <div className="chat-bubble assistant">
-              <div className="chat-bubble-name">{selected.name}</div>
-              <div className="chat-bubble-content chat-typing">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
+            <div className="kt-msg received">
+              <div className="kt-msg-profile-col">
+                {(messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
+                  <div className="kt-profile-pic small">{selected.name[0]}</div>
+                )}
+              </div>
+              <div className="kt-msg-body">
+                {(messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
+                  <div className="kt-msg-sender">{selected.name}</div>
+                )}
+                <div className="kt-msg-row received">
+                  <div className="kt-bubble received kt-typing">
+                    <span className="kt-dot" />
+                    <span className="kt-dot" />
+                    <span className="kt-dot" />
+                  </div>
+                </div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="chat-input-area">
+        <div className="kt-input-area">
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="메시지를 입력해..."
+            placeholder="메시지 보내기"
             disabled={loading}
-            className="chat-text-input"
+            className="kt-text-input"
           />
           <button
-            className="chat-send-btn"
+            className={`kt-send-btn ${input.trim() ? 'active' : ''}`}
             onClick={sendMessage}
             disabled={!input.trim() || loading}
           >
-            ↑
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
       </div>
