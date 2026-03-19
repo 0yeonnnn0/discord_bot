@@ -64,12 +64,14 @@ export interface PresetInfo {
   name: string;
   description: string;
   active: boolean;
+  enabled: boolean;
 }
 
 export interface Preset extends PresetInfo {
   prompt: string;
   ownerSuffix: string;
   userSuffix: string;
+  voice: string;
 }
 
 export interface RagStats {

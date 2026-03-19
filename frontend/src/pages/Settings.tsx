@@ -35,6 +35,7 @@ export default function Settings() {
   const [replyMode, setReplyMode] = useState('auto')
   const [judgeInterval, setJudgeInterval] = useState(120)
   const [judgeThreshold, setJudgeThreshold] = useState(5)
+  const [judgePrompt, setJudgePrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -66,6 +67,7 @@ export default function Settings() {
       setReplyMode(d.replyMode || 'auto')
       setJudgeInterval(d.judgeInterval || 120)
       setJudgeThreshold(d.judgeThreshold || 5)
+      setJudgePrompt(d.judgePrompt || '')
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -90,6 +92,18 @@ export default function Settings() {
     if (res.ok) {
       setActivePresetId(id)
       toast.success(`프리셋 "${presets.find(p => p.id === id)?.name}" 활성화`)
+      fetchPresets()
+    }
+  }
+
+  const togglePresetEnabled = async (id: string, enabled: boolean) => {
+    const res = await fetch(`/api/presets/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    if (res.ok) {
+      toast.success(enabled ? '프리셋 활성화' : '프리셋 비활성화')
       fetchPresets()
     }
   }
@@ -140,7 +154,7 @@ export default function Settings() {
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold }),
+      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold, judgePrompt }),
     })
     const labels: Record<string, string> = { auto: '자동', interval: '간격', mute: '음소거' }
     res.ok ? toast.success(`응답 모드: ${labels[replyMode]}`) : toast.error('저장 실패')
@@ -344,7 +358,15 @@ export default function Settings() {
               </div>
             )}
             {replyMode === 'auto' && (
-              <p className="form-hint">매 메시지마다 AI가 끼어들지 판단 (끊어 말하기 1.5초 대기)</p>
+              <div>
+                <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>AI 판단 프롬프트</div>
+                <textarea rows={10} value={judgePrompt}
+                  onChange={e => setJudgePrompt(e.target.value)}
+                  placeholder="비워두면 기본 프롬프트 사용"
+                  spellCheck={false}
+                  style={{ minHeight: '180px' }} />
+                <p className="form-hint">비워두면 기본 판단 프롬프트 사용. 반드시 &lt;SKIP&gt;을 응답하는 조건을 포함해야 함.</p>
+              </div>
             )}
             {replyMode === 'mute' && (
               <p className="form-hint">자동 참여 완전 중단 (멘션은 여전히 응답)</p>
@@ -537,23 +559,28 @@ export default function Settings() {
               {presets.map(p => (
                 <div
                   key={p.id}
-                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''}`}
+                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''}`}
                   onClick={() => selectPreset(p.id)}
                 >
                   <div className="preset-info">
-                    <span className="preset-name">{p.name}</span>
+                    <span className="preset-name" style={{ opacity: p.enabled ? 1 : 0.4 }}>{p.name}</span>
                     <span className="preset-desc">{p.description}</span>
                   </div>
-                  <div className="preset-actions">
+                  <div className="preset-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <button className="btn btn-ghost"
+                      style={{ padding: '2px 8px', fontSize: '0.65rem' }}
+                      onClick={(e) => { e.stopPropagation(); togglePresetEnabled(p.id, !p.enabled); }}>
+                      {p.enabled ? 'Disable' : 'Enable'}
+                    </button>
                     {p.id === activePresetId ? (
                       <span className="panel-badge green">Active</span>
-                    ) : (
+                    ) : p.enabled ? (
                       <button className="btn btn-ghost"
                         style={{ padding: '2px 10px', fontSize: '0.73rem' }}
                         onClick={(e) => { e.stopPropagation(); activatePreset(p.id); }}>
                         Activate
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -582,6 +609,16 @@ export default function Settings() {
                 <input type="text" value={editingPreset.description}
                   onChange={e => setEditingPreset({ ...editingPreset, description: e.target.value })}
                   placeholder="설명" style={{ flex: 2 }} />
+                <select value={editingPreset.voice || 'kore'}
+                  onChange={e => setEditingPreset({ ...editingPreset, voice: e.target.value })}
+                  className="model-select" style={{ minWidth: '140px' }}>
+                  <option value="kore">Kore (여성, 차분)</option>
+                  <option value="aoede">Aoede (여성, 밝음)</option>
+                  <option value="leda">Leda (여성, 따뜻)</option>
+                  <option value="puck">Puck (남성, 활발)</option>
+                  <option value="charon">Charon (남성, 낮음)</option>
+                  <option value="fenrir">Fenrir (남성, 부드러움)</option>
+                </select>
               </div>
 
               <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>System Prompt</div>

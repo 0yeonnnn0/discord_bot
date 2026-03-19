@@ -12,6 +12,8 @@ export interface Preset {
   prompt: string;
   ownerSuffix: string;
   userSuffix: string;
+  enabled: boolean;
+  voice: string;
 }
 
 export interface PresetInfo {
@@ -19,6 +21,7 @@ export interface PresetInfo {
   name: string;
   description: string;
   active: boolean;
+  enabled: boolean;
 }
 
 // ── 기본 프리셋들 ──
@@ -72,6 +75,8 @@ const DEFAULT_PRESETS: Record<string, Preset> = {
 - 기본적으로 까칠하다냥.
 - 건방진 놈한테는 더 건방지게 굴어라냥!!
 - 그래도 대화는 해준다냥. 냐도 심심하니까냥`,
+    enabled: true,
+    voice: "kore",
   },
 
   yeonnnn: {
@@ -197,6 +202,8 @@ A: 퇴사아아아아아ㅏ앙
 약 1주반동안의 백수생활 즐겨야지`,
     ownerSuffix: "",
     userSuffix: "",
+    enabled: true,
+    voice: "puck",
   },
 
   youngjun: {
@@ -305,6 +312,8 @@ A: 고수는 이럴때
 하하`,
     ownerSuffix: "",
     userSuffix: "",
+    enabled: true,
+    voice: "charon",
   },
 };
 
@@ -350,13 +359,16 @@ function savePresets(): void {
 }
 
 // ── API ──
-export function getPresets(): PresetInfo[] {
-  return Object.entries(presets).map(([id, p]) => ({
-    id,
-    name: p.name,
-    description: p.description,
-    active: id === activePresetId,
-  }));
+export function getPresets(enabledOnly = false): PresetInfo[] {
+  return Object.entries(presets)
+    .filter(([, p]) => !enabledOnly || p.enabled !== false)
+    .map(([id, p]) => ({
+      id,
+      name: p.name,
+      description: p.description,
+      active: id === activePresetId,
+      enabled: p.enabled !== false,
+    }));
 }
 
 export function getPreset(id: string): Preset | null {
@@ -375,14 +387,24 @@ export function setActivePreset(id: string): boolean {
 }
 
 export function upsertPreset(id: string, data: Partial<Preset>): void {
+  const existing = presets[id];
   presets[id] = {
     name: data.name || id,
     description: data.description || "",
     prompt: data.prompt || "",
     ownerSuffix: data.ownerSuffix || "",
     userSuffix: data.userSuffix || "",
+    enabled: data.enabled !== undefined ? data.enabled : (existing?.enabled !== false),
+    voice: data.voice || existing?.voice || "kore",
   };
   savePresets();
+}
+
+export function togglePreset(id: string, enabled: boolean): boolean {
+  if (!presets[id]) return false;
+  presets[id].enabled = enabled;
+  savePresets();
+  return true;
 }
 
 export function deletePreset(id: string): boolean {

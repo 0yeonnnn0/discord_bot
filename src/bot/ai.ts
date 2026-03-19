@@ -14,7 +14,7 @@ export async function getReply(history: HistoryMessage[], ragContext: string = "
   return callAI(history, prompt);
 }
 
-const JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
+const DEFAULT_JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
 아래 대화를 보고, 네가 자연스럽게 끼어들 수 있는 상황이면 답변해.
 끼어드는 게 어색하거나 굳이 필요 없으면 정확히 "<SKIP>"이라고만 답해.
 
@@ -35,9 +35,13 @@ const JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
 - "ㅋㅋ", "ㅇㅇ", "ㄹㅇ", "ㅇㅈ" 같은 짧은 리액션만 있을 때
 - 누군가의 말에 다른 사람이 이미 잘 대답했을 때`;
 
+function getJudgePrompt(): string {
+  return state.config.judgePrompt || DEFAULT_JUDGE_PROMPT;
+}
+
 export async function judgeAndReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string | null> {
   const basePrompt = buildPromptWithCustom(userId);
-  const prompt = JUDGE_PROMPT + "\n\n" + basePrompt + (ragContext || "");
+  const prompt = getJudgePrompt() + "\n\n" + basePrompt + (ragContext || "");
   const reply = await callAI(history, prompt);
   if (reply.trim() === "<SKIP>") return null;
   return reply;

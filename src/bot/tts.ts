@@ -44,7 +44,7 @@ export async function generateSpeech(
 ): Promise<AttachmentBuilder | null> {
   const voiceName = VOICES[voice] || VOICES.kore;
 
-  // Try native audio first, fallback to TTS
+  // Native audio first, TTS as fallback
   try {
     return await generateNativeAudio(text, voiceName);
   } catch (err) {
@@ -67,6 +67,7 @@ async function generateNativeAudio(text: string, voiceName: string): Promise<Att
       model: "gemini-2.5-flash-native-audio-preview-12-2025",
       config: {
         responseModalities: [Modality.AUDIO],
+        systemInstruction: "너는 텍스트를 음성으로 읽어주는 역할이야. 아래 텍스트를 한 글자도 바꾸지 말고 정확히 그대로 읽어. 절대 내용을 해석하거나 새로운 답변을 만들지 마. 자연스러운 억양과 감정을 담아서 읽되, 텍스트 내용 자체는 변경하지 마.",
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName },
@@ -74,9 +75,6 @@ async function generateNativeAudio(text: string, voiceName: string): Promise<Att
         },
       },
       callbacks: {
-        onopen() {
-          // Session is available as `this` won't work, so we use the promise-returned session
-        },
         onmessage(message: any) {
           if (message.serverContent?.modelTurn?.parts) {
             for (const part of message.serverContent.modelTurn.parts) {
