@@ -599,6 +599,16 @@ export default function Settings() {
                 <input type="text" value={editingPreset.description}
                   onChange={e => setEditingPreset({ ...editingPreset, description: e.target.value })}
                   placeholder="설명" style={{ flex: 2 }} />
+                <select value={editingPreset.voice || 'kore'}
+                  onChange={e => setEditingPreset({ ...editingPreset, voice: e.target.value })}
+                  className="model-select" style={{ minWidth: '140px' }}>
+                  <option value="kore">Kore (여성, 차분)</option>
+                  <option value="aoede">Aoede (여성, 밝음)</option>
+                  <option value="leda">Leda (여성, 따뜻)</option>
+                  <option value="puck">Puck (남성, 활발)</option>
+                  <option value="charon">Charon (남성, 낮음)</option>
+                  <option value="fenrir">Fenrir (남성, 부드러움)</option>
+                </select>
               </div>
 
               <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>System Prompt</div>

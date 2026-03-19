@@ -320,7 +320,10 @@ async function handleDraw(interaction: ChatInputCommandInteraction): Promise<voi
 // ── /say ──
 async function handleSay(interaction: ChatInputCommandInteraction): Promise<void> {
   const message = interaction.options.getString("message", true);
-  const voice = (interaction.options.getString("voice") || "kore") as VoiceName;
+  const explicitVoice = interaction.options.getString("voice");
+  // Use preset's default voice if user didn't pick one
+  const presetVoice = getPreset(getActivePresetId())?.voice || "kore";
+  const voice = (explicitVoice || presetVoice) as VoiceName;
   await interaction.deferReply();
 
   try {

@@ -13,6 +13,7 @@ export interface Preset {
   ownerSuffix: string;
   userSuffix: string;
   enabled: boolean;
+  voice: string;
 }
 
 export interface PresetInfo {
@@ -75,6 +76,7 @@ const DEFAULT_PRESETS: Record<string, Preset> = {
 - 건방진 놈한테는 더 건방지게 굴어라냥!!
 - 그래도 대화는 해준다냥. 냐도 심심하니까냥`,
     enabled: true,
+    voice: "kore",
   },
 
   yeonnnn: {
@@ -201,6 +203,7 @@ A: 퇴사아아아아아ㅏ앙
     ownerSuffix: "",
     userSuffix: "",
     enabled: true,
+    voice: "puck",
   },
 
   youngjun: {
@@ -310,6 +313,7 @@ A: 고수는 이럴때
     ownerSuffix: "",
     userSuffix: "",
     enabled: true,
+    voice: "charon",
   },
 };
 
@@ -391,6 +395,7 @@ export function upsertPreset(id: string, data: Partial<Preset>): void {
     ownerSuffix: data.ownerSuffix || "",
     userSuffix: data.userSuffix || "",
     enabled: data.enabled !== undefined ? data.enabled : (existing?.enabled !== false),
+    voice: data.voice || existing?.voice || "kore",
   };
   savePresets();
 }
