@@ -98,6 +98,9 @@ router.put("/config", (req: Request, res: Response) => {
     if (isNaN(v) || v < 1 || v > 50) return res.status(400).json({ error: "judgeThreshold는 1~50" });
     state.config.judgeThreshold = v;
   }
+  if (req.body.judgePrompt !== undefined) {
+    state.config.judgePrompt = req.body.judgePrompt;
+  }
   res.json(state.config);
 });
 

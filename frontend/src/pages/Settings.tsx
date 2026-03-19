@@ -35,6 +35,7 @@ export default function Settings() {
   const [replyMode, setReplyMode] = useState('auto')
   const [judgeInterval, setJudgeInterval] = useState(120)
   const [judgeThreshold, setJudgeThreshold] = useState(5)
+  const [judgePrompt, setJudgePrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -66,6 +67,7 @@ export default function Settings() {
       setReplyMode(d.replyMode || 'auto')
       setJudgeInterval(d.judgeInterval || 120)
       setJudgeThreshold(d.judgeThreshold || 5)
+      setJudgePrompt(d.judgePrompt || '')
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -152,7 +154,7 @@ export default function Settings() {
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold }),
+      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold, judgePrompt }),
     })
     const labels: Record<string, string> = { auto: '자동', interval: '간격', mute: '음소거' }
     res.ok ? toast.success(`응답 모드: ${labels[replyMode]}`) : toast.error('저장 실패')
@@ -356,7 +358,15 @@ export default function Settings() {
               </div>
             )}
             {replyMode === 'auto' && (
-              <p className="form-hint">매 메시지마다 AI가 끼어들지 판단 (끊어 말하기 1.5초 대기)</p>
+              <div>
+                <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>AI 판단 프롬프트</div>
+                <textarea rows={10} value={judgePrompt}
+                  onChange={e => setJudgePrompt(e.target.value)}
+                  placeholder="비워두면 기본 프롬프트 사용"
+                  spellCheck={false}
+                  style={{ minHeight: '180px' }} />
+                <p className="form-hint">비워두면 기본 판단 프롬프트 사용. 반드시 &lt;SKIP&gt;을 응답하는 조건을 포함해야 함.</p>
+              </div>
             )}
             {replyMode === 'mute' && (
               <p className="form-hint">자동 참여 완전 중단 (멘션은 여전히 응답)</p>
