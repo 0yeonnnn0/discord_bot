@@ -10,6 +10,10 @@ import { registerCommands, handleInteraction, handleAutocomplete } from "./comma
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
 
+// Debounce: wait for conversation to settle before AI judges
+const DEBOUNCE_MS = 1500;
+const judgeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -142,41 +146,51 @@ client.on("messageCreate", async (message: Message) => {
     model: null,
   });
 
-  // Mentioned → always reply. Otherwise → let AI decide.
+  // Mentioned → always reply. Otherwise → debounce + let AI decide.
   if (!isMentioned) {
-    if (!canUserRequest(message.author.id)) return;
+    // Cancel previous timer for this channel (someone is still talking)
+    const existingTimer = judgeTimers.get(channelId);
+    if (existingTimer) clearTimeout(existingTimer);
 
-    const startTime = Date.now();
-    try {
-      const reply = await enqueue(async () => {
-        const channelHistory = history.getHistory(channelId);
-        const ragResults = await rag.searchRelevant(cleanContent);
-        const ragContext = rag.formatContext(ragResults);
-        return judgeAndReply(channelHistory, ragContext, message.author.id);
-      });
+    // Wait for conversation to settle, then let AI judge
+    const timer = setTimeout(async () => {
+      judgeTimers.delete(channelId);
+      if (!canUserRequest(message.author.id)) return;
 
-      if (!reply) return; // AI decided to skip
+      const startTime = Date.now();
+      try {
+        const reply = await enqueue(async () => {
+          const channelHistory = history.getHistory(channelId);
+          const ragResults = await rag.searchRelevant(cleanContent);
+          const ragContext = rag.formatContext(ragResults);
+          return judgeAndReply(channelHistory, ragContext, message.author.id);
+        });
 
-      markUserRequest(message.author.id);
-      const responseTime = Date.now() - startTime;
+        if (!reply) return;
 
-      await message.reply(reply);
-      history.addMessage(channelId, { role: "assistant", content: reply });
-      state.stats.repliesSent++;
-      trackUser(message.author.id, message.author.displayName, true);
+        markUserRequest(message.author.id);
+        const responseTime = Date.now() - startTime;
 
-      const lastLog = state.logs[state.logs.length - 1];
-      if (lastLog) {
-        lastLog.botReplied = true;
-        lastLog.triggerReason = "random";
-        lastLog.botReply = reply;
-        lastLog.responseTime = responseTime;
-        lastLog.model = lastUsedModel;
+        await message.reply(reply);
+        history.addMessage(channelId, { role: "assistant", content: reply });
+        state.stats.repliesSent++;
+        trackUser(message.author.id, message.author.displayName, true);
+
+        const lastLog = state.logs[state.logs.length - 1];
+        if (lastLog) {
+          lastLog.botReplied = true;
+          lastLog.triggerReason = "random";
+          lastLog.botReply = reply;
+          lastLog.responseTime = responseTime;
+          lastLog.model = lastUsedModel;
+        }
+      } catch (err) {
+        const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
+        addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
       }
-    } catch (err) {
-      const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
-      addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
-    }
+    }, DEBOUNCE_MS);
+
+    judgeTimers.set(channelId, timer);
     return;
   }
 

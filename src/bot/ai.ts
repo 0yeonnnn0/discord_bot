@@ -29,7 +29,9 @@ const JUDGE_PROMPT = `너는 디스코드 채팅방을 지켜보는 봇이야.
 - 둘이서 진지한 대화 중일 때
 - 이미 대화가 잘 흘러가고 있을 때
 - 맥락을 모르는 대화일 때
-- 방금 네가 이미 말한 직후일 때`;
+- 방금 네가 이미 말한 직후일 때
+- 상대방이 아직 말을 끝내지 않은 것 같을 때 (메시지가 짧고 문장이 미완성이면 더 기다려)
+- 마지막 메시지가 "ㅋㅋ", "ㅇㅇ", "ㄹㅇ" 같은 리액션만 있을 때`;
 
 export async function judgeAndReply(history: HistoryMessage[], ragContext: string = "", userId: string = ""): Promise<string | null> {
   const basePrompt = buildPromptWithCustom(userId);
