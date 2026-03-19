@@ -84,9 +84,27 @@ export const commands = [
 
   new SlashCommandBuilder()
     .setName("mute")
-    .setDescription("봇 자동 참여를 일시 정지/해제")
+    .setDescription("이 채널에서 봇 임시 정지/해제")
     .addIntegerOption(opt =>
       opt.setName("minutes").setDescription("정지 시간 (분, 기본 30분, 0이면 해제)").setMinValue(0).setMaxValue(1440)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("reply")
+    .setDescription("봇 응답 모드 변경")
+    .addStringOption(opt =>
+      opt.setName("mode").setDescription("응답 모드").setRequired(true)
+        .addChoices(
+          { name: "자동 (AI 판단)", value: "auto" },
+          { name: "간격 (타이머/메시지 수)", value: "interval" },
+          { name: "음소거", value: "mute" },
+        )
+    )
+    .addIntegerOption(opt =>
+      opt.setName("interval").setDescription("간격 모드: 타이머 (초, 기본 120)").setMinValue(10).setMaxValue(600)
+    )
+    .addIntegerOption(opt =>
+      opt.setName("threshold").setDescription("간격 모드: 메시지 수 (기본 5)").setMinValue(1).setMaxValue(50)
     ),
 ];
 
@@ -129,6 +147,9 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "mute":
       await handleMute(interaction);
+      break;
+    case "reply":
+      await handleReply(interaction);
       break;
   }
 }
@@ -207,7 +228,7 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
       { name: "Uptime", value: `${h}h ${m}m`, inline: true },
       { name: "Messages", value: `${state.stats.messagesProcessed}`, inline: true },
       { name: "Replies", value: `${state.stats.repliesSent}`, inline: true },
-      { name: "Reply Mode", value: "AI 판단", inline: true },
+      { name: "Reply Mode", value: state.config.replyMode === "auto" ? "자동 (AI 판단)" : state.config.replyMode === "interval" ? `간격 (${state.config.judgeInterval}초/${state.config.judgeThreshold}개)` : "음소거", inline: true },
       { name: "Model", value: state.config.model, inline: true },
       { name: "Preset", value: preset?.name || presetId, inline: true },
       { name: "Queue", value: `${queue.activeCount}/${queue.maxConcurrent} active`, inline: true },
@@ -324,6 +345,25 @@ async function handleSay(interaction: ChatInputCommandInteraction): Promise<void
       await interaction.editReply("목소리 내다가 고장났다냥... @д@ " + msg);
     }
   }
+}
+
+// ── /reply ──
+async function handleReply(interaction: ChatInputCommandInteraction): Promise<void> {
+  const mode = interaction.options.getString("mode", true) as "auto" | "interval" | "mute";
+  const interval = interaction.options.getInteger("interval");
+  const threshold = interaction.options.getInteger("threshold");
+
+  state.config.replyMode = mode;
+  if (interval !== null) state.config.judgeInterval = interval;
+  if (threshold !== null) state.config.judgeThreshold = threshold;
+
+  const labels: Record<string, string> = {
+    auto: "자동 (AI 판단)",
+    interval: `간격 (${state.config.judgeInterval}초 / ${state.config.judgeThreshold}개)`,
+    mute: "음소거",
+  };
+
+  await interaction.reply(`응답 모드 변경: **${labels[mode]}**`);
 }
 
 // ── /mute ──

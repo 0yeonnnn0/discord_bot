@@ -10,15 +10,16 @@ import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
 
-// AI judge trigger: 2min timer OR 5 messages, whichever comes first
-const JUDGE_INTERVAL_MS = 2 * 60 * 1000;
-const JUDGE_MSG_THRESHOLD = 5;
-
+// Interval mode state: timer + message counter per channel
 interface ChannelJudgeState {
   timer: ReturnType<typeof setTimeout>;
   msgCount: number;
 }
 const judgeState = new Map<string, ChannelJudgeState>();
+
+// Auto mode debounce: 1.5s per person
+const AUTO_DEBOUNCE_MS = 1500;
+const autoTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
 
 export const client = new Client({
   intents: [
@@ -189,28 +190,52 @@ client.on("messageCreate", async (message: Message) => {
     model: null,
   });
 
-  // Mentioned → always reply. Otherwise → 2min timer / 5 messages trigger.
+  // Mentioned → always reply. Otherwise → mode-based auto-participation.
   if (!isMentioned) {
-    if (isChannelMuted(channelId)) return;
+    const mode = state.config.replyMode;
 
-    const cs = judgeState.get(channelId);
+    // Mute mode → skip entirely
+    if (mode === "mute" || isChannelMuted(channelId)) return;
 
-    if (!cs) {
-      // First message in this cycle → start 2min timer
-      const timer = setTimeout(() => {
-        judgeState.delete(channelId);
-        triggerJudge(channelId, message, channelName, guildName);
-      }, JUDGE_INTERVAL_MS);
-      judgeState.set(channelId, { timer, msgCount: 1 });
-    } else {
-      cs.msgCount++;
-      if (cs.msgCount >= JUDGE_MSG_THRESHOLD) {
-        // 5 messages reached → judge now + reset
-        clearTimeout(cs.timer);
-        judgeState.delete(channelId);
-        triggerJudge(channelId, message, channelName, guildName);
+    // Auto mode → AI judges every message (with per-person debounce)
+    if (mode === "auto") {
+      const existing = autoTimers.get(channelId);
+      if (existing) {
+        if (existing.authorId === message.author.id) {
+          clearTimeout(existing.timer);
+        }
       }
+      const timer = setTimeout(() => {
+        autoTimers.delete(channelId);
+        triggerJudge(channelId, message, channelName, guildName);
+      }, AUTO_DEBOUNCE_MS);
+      autoTimers.set(channelId, { timer, authorId: message.author.id });
+      return;
     }
+
+    // Interval mode → timer + message count trigger
+    if (mode === "interval") {
+      const intervalMs = state.config.judgeInterval * 1000;
+      const threshold = state.config.judgeThreshold;
+      const cs = judgeState.get(channelId);
+
+      if (!cs) {
+        const timer = setTimeout(() => {
+          judgeState.delete(channelId);
+          triggerJudge(channelId, message, channelName, guildName);
+        }, intervalMs);
+        judgeState.set(channelId, { timer, msgCount: 1 });
+      } else {
+        cs.msgCount++;
+        if (cs.msgCount >= threshold) {
+          clearTimeout(cs.timer);
+          judgeState.delete(channelId);
+          triggerJudge(channelId, message, channelName, guildName);
+        }
+      }
+      return;
+    }
+
     return;
   }
 
