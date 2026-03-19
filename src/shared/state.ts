@@ -52,6 +52,9 @@ export interface Config {
   judgeInterval: number;    // interval 모드: 타이머 (초)
   judgeThreshold: number;   // interval 모드: 메시지 수
   judgePrompt: string;      // auto 모드: AI 판단 프롬프트
+  // 웹 채팅 설정
+  webShowNickname: boolean;    // AI에게 닉네임 포함해서 보내기
+  webSystemPrompt: string;     // 웹 채팅 전용 추가 프롬프트
 }
 
 export interface State {
@@ -93,6 +96,8 @@ export const state: State = {
     judgeInterval: saved?.config?.judgeInterval ?? 120,
     judgeThreshold: saved?.config?.judgeThreshold ?? 5,
     judgePrompt: saved?.config?.judgePrompt ?? "",
+    webShowNickname: saved?.config?.webShowNickname ?? false,
+    webSystemPrompt: saved?.config?.webSystemPrompt ?? "",
   },
   stats: {
     messagesProcessed: saved?.stats?.messagesProcessed ?? 0,

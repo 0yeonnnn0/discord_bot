@@ -37,6 +37,8 @@ export default function Settings() {
   const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [judgePrompt, setJudgePrompt] = useState('')
   const [defaultJudgePrompt, setDefaultJudgePrompt] = useState('')
+  const [webShowNickname, setWebShowNickname] = useState(false)
+  const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -70,6 +72,8 @@ export default function Settings() {
       setJudgeThreshold(d.judgeThreshold || 5)
       setJudgePrompt(d.judgePrompt || '')
       setDefaultJudgePrompt(d.defaultJudgePrompt || '')
+      setWebShowNickname(d.webShowNickname ?? false)
+      setWebSystemPrompt(d.webSystemPrompt || '')
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -373,6 +377,37 @@ export default function Settings() {
             {replyMode === 'mute' && (
               <p className="form-hint">자동 참여 완전 중단 (멘션은 여전히 응답)</p>
             )}
+          </div>
+
+          {/* Web Chat Settings */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">Web Chat</span>
+              <button className="btn btn-primary" onClick={async () => {
+                const res = await fetch('/api/config', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ webShowNickname, webSystemPrompt }),
+                })
+                res.ok ? toast.success('웹 채팅 설정 저장') : toast.error('저장 실패')
+              }}>Save</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', fontSize: '0.87rem', color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={webShowNickname} onChange={e => setWebShowNickname(e.target.checked)}
+                  style={{ accentColor: 'var(--accent)' }} />
+                AI에게 닉네임 포함해서 보내기
+              </label>
+            </div>
+            <div>
+              <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>웹 채팅 추가 프롬프트</div>
+              <textarea rows={4} value={webSystemPrompt}
+                onChange={e => setWebSystemPrompt(e.target.value)}
+                placeholder="웹 채팅에서만 프리셋 뒤에 추가되는 프롬프트 (선택사항)"
+                spellCheck={false}
+                style={{ minHeight: '80px' }} />
+              <p className="form-hint">프리셋 프롬프트 뒤에 추가됨. 웹 채팅 전용 규칙을 넣을 때 사용.</p>
+            </div>
           </div>
 
           {/* RAG Memory */}
