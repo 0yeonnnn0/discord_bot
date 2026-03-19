@@ -4,7 +4,7 @@ import { client } from "../../bot/client";
 import { state, getTopKeywords, getUserStatsRanked } from "../../shared/state";
 import {
   getPresets, getPreset, getActivePresetId, setActivePreset,
-  upsertPreset, deletePreset, getActivePrompt,
+  upsertPreset, deletePreset, togglePreset, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
 import { getReply, callAI, lastUsedModel } from "../../bot/ai";
@@ -18,7 +18,7 @@ const router = Router();
 
 // ── Public Chat API (no auth required) ──
 router.get("/chat/characters", (_req: Request, res: Response) => {
-  const all = getPresets();
+  const all = getPresets(true); // enabled only
   const characters = all.map(p => ({ id: p.id, name: p.name, description: p.description }));
   res.json(characters);
 });
@@ -130,6 +130,13 @@ router.get("/presets/:id", (req: Request, res: Response) => {
 router.put("/presets/:id/activate", (req: Request, res: Response) => {
   if (!setActivePreset(req.params.id as string)) return res.status(404).json({ error: "프리셋 없음" });
   res.json({ activeId: req.params.id as string });
+});
+
+router.put("/presets/:id/toggle", (req: Request, res: Response) => {
+  const { enabled } = req.body;
+  if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled (boolean) 필요" });
+  if (!togglePreset(req.params.id as string, enabled)) return res.status(404).json({ error: "프리셋 없음" });
+  res.json({ id: req.params.id, enabled });
 });
 
 router.put("/presets/:id", (req: Request, res: Response) => {

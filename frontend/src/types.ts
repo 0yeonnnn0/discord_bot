@@ -64,6 +64,7 @@ export interface PresetInfo {
   name: string;
   description: string;
   active: boolean;
+  enabled: boolean;
 }
 
 export interface Preset extends PresetInfo {

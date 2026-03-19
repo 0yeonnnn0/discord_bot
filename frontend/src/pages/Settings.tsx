@@ -94,6 +94,18 @@ export default function Settings() {
     }
   }
 
+  const togglePresetEnabled = async (id: string, enabled: boolean) => {
+    const res = await fetch(`/api/presets/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    if (res.ok) {
+      toast.success(enabled ? '프리셋 활성화' : '프리셋 비활성화')
+      fetchPresets()
+    }
+  }
+
   const savePreset = async () => {
     if (!editingPreset) return
     const res = await fetch(`/api/presets/${editingPreset.id}`, {
@@ -537,23 +549,28 @@ export default function Settings() {
               {presets.map(p => (
                 <div
                   key={p.id}
-                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''}`}
+                  className={`preset-item ${p.id === activePresetId ? 'active' : ''} ${editingPreset?.id === p.id ? 'editing' : ''} ${!p.enabled ? 'disabled' : ''}`}
                   onClick={() => selectPreset(p.id)}
                 >
                   <div className="preset-info">
-                    <span className="preset-name">{p.name}</span>
+                    <span className="preset-name" style={{ opacity: p.enabled ? 1 : 0.4 }}>{p.name}</span>
                     <span className="preset-desc">{p.description}</span>
                   </div>
-                  <div className="preset-actions">
+                  <div className="preset-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <button className="btn btn-ghost"
+                      style={{ padding: '2px 8px', fontSize: '0.65rem' }}
+                      onClick={(e) => { e.stopPropagation(); togglePresetEnabled(p.id, !p.enabled); }}>
+                      {p.enabled ? 'Disable' : 'Enable'}
+                    </button>
                     {p.id === activePresetId ? (
                       <span className="panel-badge green">Active</span>
-                    ) : (
+                    ) : p.enabled ? (
                       <button className="btn btn-ghost"
                         style={{ padding: '2px 10px', fontSize: '0.73rem' }}
                         onClick={(e) => { e.stopPropagation(); activatePreset(p.id); }}>
                         Activate
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}

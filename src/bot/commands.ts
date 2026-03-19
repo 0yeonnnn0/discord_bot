@@ -159,11 +159,11 @@ async function handleMode(interaction: ChatInputCommandInteraction): Promise<voi
   const sub = interaction.options.getSubcommand();
 
   if (sub === "list") {
-    const presets = getPresets();
+    const presets = getPresets(true);
     const list = presets.map(p =>
       `${p.active ? "▸ " : "　"}**${p.name}**${p.active ? " ← current" : ""}\n　　\`/mode set preset:${p.id}\``
     ).join("\n");
-    await interaction.reply({ content: `**Presets**\n\n${list}`, ephemeral: true });
+    await interaction.reply({ content: `**프리셋**\n\n${list}`, ephemeral: true });
     return;
   }
 
@@ -400,7 +400,7 @@ export async function handleAutocomplete(interaction: any): Promise<void> {
   const focused = interaction.options.getFocused(true);
 
   if (focused.name === "preset") {
-    const presets = getPresets();
+    const presets = getPresets(true);
     const filtered = presets.filter(p =>
       p.id.includes(focused.value) || p.name.includes(focused.value)
     );
