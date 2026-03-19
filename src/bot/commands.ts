@@ -11,7 +11,7 @@ import { getReply } from "./ai";
 import { state } from "../shared/state";
 import { getQueueStats } from "./queue";
 import { getStats as getRagStats } from "./rag";
-import { generateImage } from "./draw";
+import { generateImage, type ImagenModel } from "./draw";
 
 // ── Command Definitions ──
 export const commands = [
@@ -58,9 +58,17 @@ export const commands = [
 
   new SlashCommandBuilder()
     .setName("draw")
-    .setDescription("Generate an image with AI")
+    .setDescription("Generate an image with AI (Imagen 4)")
     .addStringOption(opt =>
       opt.setName("prompt").setDescription("What to draw").setRequired(true)
+    )
+    .addStringOption(opt =>
+      opt.setName("quality").setDescription("Image quality")
+        .addChoices(
+          { name: "Fast", value: "fast" },
+          { name: "Standard", value: "standard" },
+          { name: "Ultra", value: "ultra" },
+        )
     ),
 ];
 
@@ -250,10 +258,11 @@ ${chatLog}`;
 // ── /draw ──
 async function handleDraw(interaction: ChatInputCommandInteraction): Promise<void> {
   const prompt = interaction.options.getString("prompt", true);
+  const quality = (interaction.options.getString("quality") || "fast") as ImagenModel;
   await interaction.deferReply();
 
   try {
-    const attachment = await generateImage(prompt);
+    const attachment = await generateImage(prompt, quality);
     if (attachment) {
       await interaction.editReply({
         content: `**${prompt}**`,

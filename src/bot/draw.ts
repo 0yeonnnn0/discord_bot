@@ -10,20 +10,32 @@ function getAI(): GoogleGenAI {
   return ai;
 }
 
-export async function generateImage(prompt: string): Promise<AttachmentBuilder | null> {
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash-image",
-    contents: prompt,
+export type ImagenModel = "fast" | "standard" | "ultra";
+
+const MODEL_MAP: Record<ImagenModel, string> = {
+  fast: "imagen-4.0-fast-generate-001",
+  standard: "imagen-4.0-generate-001",
+  ultra: "imagen-4.0-ultra-generate-001",
+};
+
+export async function generateImage(
+  prompt: string,
+  quality: ImagenModel = "fast"
+): Promise<AttachmentBuilder | null> {
+  const model = MODEL_MAP[quality] || MODEL_MAP.fast;
+
+  const response = await getAI().models.generateImages({
+    model,
+    prompt,
     config: {
-      responseModalities: ["TEXT", "IMAGE"],
+      numberOfImages: 1,
     },
   });
 
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData && part.inlineData.mimeType?.startsWith("image/")) {
-      const buffer = Buffer.from(part.inlineData.data!, "base64");
-      return new AttachmentBuilder(buffer, { name: "toro-art.png" });
-    }
+  const generated = response.generatedImages?.[0];
+  if (generated?.image?.imageBytes) {
+    const buffer = Buffer.from(generated.image.imageBytes, "base64");
+    return new AttachmentBuilder(buffer, { name: "toro-art.png" });
   }
 
   return null;
