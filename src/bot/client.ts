@@ -1,14 +1,18 @@
 import { Client, GatewayIntentBits, Message, ChatInputCommandInteraction } from "discord.js";
-import { getReply, judgeAndReply } from "./ai";
+import { getReply, judgeAndReply, lastUsedModel } from "./ai";
 import * as history from "./history";
 import * as rag from "./rag";
 import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../shared/state";
 import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
-import { registerCommands, handleInteraction, handleAutocomplete } from "./commands";
+import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted } from "./commands";
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
+
+// Debounce: wait for same person to finish talking before AI judges
+const DEBOUNCE_MS = 1500;
+const judgeTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
 
 export const client = new Client({
   intents: [
@@ -139,42 +143,65 @@ client.on("messageCreate", async (message: Message) => {
     responseTime: null,
     ragHits: 0,
     error: null,
+    model: null,
   });
 
-  // Mentioned → always reply. Otherwise → let AI decide.
+  // Mentioned → always reply. Otherwise → debounce + let AI decide.
   if (!isMentioned) {
-    if (!canUserRequest(message.author.id)) return;
-
-    const startTime = Date.now();
-    try {
-      const reply = await enqueue(async () => {
-        const channelHistory = history.getHistory(channelId);
-        const ragResults = await rag.searchRelevant(cleanContent);
-        const ragContext = rag.formatContext(ragResults);
-        return judgeAndReply(channelHistory, ragContext, message.author.id);
-      });
-
-      if (!reply) return; // AI decided to skip
-
-      markUserRequest(message.author.id);
-      const responseTime = Date.now() - startTime;
-
-      await message.reply(reply);
-      history.addMessage(channelId, { role: "assistant", content: reply });
-      state.stats.repliesSent++;
-      trackUser(message.author.id, message.author.displayName, true);
-
-      const lastLog = state.logs[state.logs.length - 1];
-      if (lastLog) {
-        lastLog.botReplied = true;
-        lastLog.triggerReason = "random";
-        lastLog.botReply = reply;
-        lastLog.responseTime = responseTime;
+    // Muted channel → skip auto-participation entirely
+    if (isChannelMuted(channelId)) return;
+    // Only debounce if same person is still talking (끊어 말하기 대기)
+    // Different person → let previous timer fire immediately, then start new one
+    const existing = judgeTimers.get(channelId);
+    if (existing) {
+      if (existing.authorId === message.author.id) {
+        // Same person still talking → reset timer
+        clearTimeout(existing.timer);
+      } else {
+        // Different person joined → let previous timer run, no reset
+        // (it will fire on its own)
       }
-    } catch (err) {
-      const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
-      addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
     }
+
+    // Wait for this person to finish, then let AI judge
+    const timer = setTimeout(async () => {
+      judgeTimers.delete(channelId);
+      if (!canUserRequest(message.author.id)) return;
+
+      const startTime = Date.now();
+      try {
+        const reply = await enqueue(async () => {
+          const channelHistory = history.getHistory(channelId);
+          const ragResults = await rag.searchRelevant(cleanContent);
+          const ragContext = rag.formatContext(ragResults);
+          return judgeAndReply(channelHistory, ragContext, message.author.id);
+        });
+
+        if (!reply) return;
+
+        markUserRequest(message.author.id);
+        const responseTime = Date.now() - startTime;
+
+        await message.reply(reply);
+        history.addMessage(channelId, { role: "assistant", content: reply });
+        state.stats.repliesSent++;
+        trackUser(message.author.id, message.author.displayName, true);
+
+        const lastLog = state.logs[state.logs.length - 1];
+        if (lastLog) {
+          lastLog.botReplied = true;
+          lastLog.triggerReason = "random";
+          lastLog.botReply = reply;
+          lastLog.responseTime = responseTime;
+          lastLog.model = lastUsedModel;
+        }
+      } catch (err) {
+        const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
+        addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
+      }
+    }, DEBOUNCE_MS);
+
+    judgeTimers.set(channelId, { timer, authorId: message.author.id });
     return;
   }
 
@@ -246,6 +273,7 @@ client.on("messageCreate", async (message: Message) => {
       lastLog.botReply = reply;
       lastLog.responseTime = responseTime;
       lastLog.ragHits = ragHitCount;
+      lastLog.model = lastUsedModel;
     }
   } catch (err) {
     const responseTime = Date.now() - startTime;

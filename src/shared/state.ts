@@ -20,6 +20,7 @@ export interface LogEntry {
   responseTime: number | null;
   ragHits: number;
   error: string | null;
+  model: string | null;
 }
 
 export interface EventEntry {

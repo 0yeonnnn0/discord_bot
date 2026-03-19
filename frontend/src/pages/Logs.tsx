@@ -73,13 +73,14 @@ export default function Logs() {
                 <TableHead style={{ width: 60 }}>Trigger</TableHead>
                 <TableHead style={{ width: 50 }}>RAG</TableHead>
                 <TableHead style={{ width: 55 }}>Speed</TableHead>
+                <TableHead style={{ width: 100 }}>Model</TableHead>
                 <TableHead style={{ width: 200 }}>Bot Reply</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
+                  <TableCell colSpan={10} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
                     로그가 없습니다
                   </TableCell>
                 </TableRow>
@@ -108,6 +109,9 @@ export default function Logs() {
                   <TableCell className="mono" style={{ fontSize: '0.73rem', color: getSpeedColor(log.responseTime) }}>
                     {log.responseTime ? `${(log.responseTime / 1000).toFixed(1)}s` : '—'}
                   </TableCell>
+                  <TableCell className="mono" style={{ fontSize: '0.7rem', color: log.model ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
+                    {log.model || '—'}
+                  </TableCell>
                   <TableCell className="wrap" style={{ color: log.error ? 'var(--red)' : log.botReply ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: '0.83rem' }}>
                     {log.error ? `[${log.error}]` : log.botReply || '—'}
                   </TableCell>
@@ -127,13 +131,14 @@ export default function Logs() {
               <TableHead style={{ width: 90 }}>Character</TableHead>
               <TableHead style={{ width: 90 }}>Nickname</TableHead>
               <TableHead>User Message</TableHead>
+              <TableHead style={{ width: 100 }}>Model</TableHead>
               <TableHead style={{ width: 250 }}>Bot Reply</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {chatLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
+                <TableCell colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-tertiary)' }}>
                   웹 채팅 로그가 없습니다
                 </TableCell>
               </TableRow>
@@ -147,6 +152,7 @@ export default function Logs() {
                 </TableCell>
                 <TableCell style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.nickname}</TableCell>
                 <TableCell className="wrap" style={{ color: 'var(--text-primary)' }}>{log.userMessage}</TableCell>
+                <TableCell className="mono" style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{log.model || '—'}</TableCell>
                 <TableCell className="wrap" style={{ color: 'var(--accent)', fontSize: '0.83rem' }}>{log.botReply}</TableCell>
               </TableRow>
             ))}
