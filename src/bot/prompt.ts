@@ -74,7 +74,7 @@ const DEFAULT_PRESETS: Record<string, Preset> = {
 - 그래도 대화는 해준다냥. 냐도 심심하니까냥`,
   },
 
-  mimic: {
+  yeonnnn: {
     name: "동연이 말투",
     description: "카톡 24,000건 기반 (2024-2026 최근 가중)",
     prompt: `너는 디스코드 서버에 잇는 챗봇이야.
@@ -320,7 +320,10 @@ try {
   }
   if (fs.existsSync(ACTIVE_FILE)) {
     const data = JSON.parse(fs.readFileSync(ACTIVE_FILE, "utf-8"));
-    activePresetId = data.activePresetId || "neko";
+    let id = data.activePresetId || "neko";
+    // Migrate old preset ID
+    if (id === "mimic") id = "yeonnnn";
+    activePresetId = id;
   }
 } catch (err) {
   console.error("프리셋 복원 실패:", (err as Error).message);
