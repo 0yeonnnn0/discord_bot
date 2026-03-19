@@ -30,9 +30,11 @@ const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
 }
 
 export default function Settings() {
-  const [chance, setChance] = useState(8)
   const [provider, setProvider] = useState('google')
   const [model, setModel] = useState('')
+  const [replyMode, setReplyMode] = useState('auto')
+  const [judgeInterval, setJudgeInterval] = useState(120)
+  const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [presets, setPresets] = useState<PresetInfo[]>([])
   const [activePresetId, setActivePresetId] = useState('')
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
@@ -59,9 +61,11 @@ export default function Settings() {
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(d => {
-      setChance(Math.round(d.replyChance * 100))
       setProvider(d.aiProvider || 'google')
       setModel(d.model || '')
+      setReplyMode(d.replyMode || 'auto')
+      setJudgeInterval(d.judgeInterval || 120)
+      setJudgeThreshold(d.judgeThreshold || 5)
     })
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
@@ -132,13 +136,14 @@ export default function Settings() {
     }
   }
 
-  const saveChance = async () => {
+  const saveReplyMode = async () => {
     const res = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replyChance: chance / 100 }),
+      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold }),
     })
-    res.ok ? toast.success(`응답 확률 ${chance}%로 저장`) : toast.error('저장 실패')
+    const labels: Record<string, string> = { auto: '자동', interval: '간격', mute: '음소거' }
+    res.ok ? toast.success(`응답 모드: ${labels[replyMode]}`) : toast.error('저장 실패')
   }
 
   const saveModel = async () => {
@@ -294,6 +299,56 @@ export default function Settings() {
                 <span className="model-info-badge fixed">고정</span>
               </div>
             </div>
+          </div>
+
+          {/* Reply Mode */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">Reply Mode</span>
+              <button className="btn btn-primary" onClick={saveReplyMode}>Save</button>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+              {[
+                { value: 'auto', label: '자동 (AI 판단)' },
+                { value: 'interval', label: '간격 모드' },
+                { value: 'mute', label: '음소거' },
+              ].map(m => (
+                <button
+                  key={m.value}
+                  className={`btn ${replyMode === m.value ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setReplyMode(m.value)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {replyMode === 'interval' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                <div>
+                  <div className="hint" style={{ marginBottom: 'var(--space-2)' }}>타이머 (초)</div>
+                  <div className="slider-row">
+                    <input type="range" min="10" max="600" value={judgeInterval}
+                      onChange={e => setJudgeInterval(Number(e.target.value))} />
+                    <span className="slider-value">{judgeInterval}s</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="hint" style={{ marginBottom: 'var(--space-2)' }}>메시지 수</div>
+                  <div className="slider-row">
+                    <input type="range" min="1" max="50" value={judgeThreshold}
+                      onChange={e => setJudgeThreshold(Number(e.target.value))} />
+                    <span className="slider-value">{judgeThreshold}개</span>
+                  </div>
+                </div>
+                <p className="form-hint">{judgeInterval}초 또는 {judgeThreshold}개 메시지 중 먼저 도달하면 AI가 판단</p>
+              </div>
+            )}
+            {replyMode === 'auto' && (
+              <p className="form-hint">매 메시지마다 AI가 끼어들지 판단 (끊어 말하기 1.5초 대기)</p>
+            )}
+            {replyMode === 'mute' && (
+              <p className="form-hint">자동 참여 완전 중단 (멘션은 여전히 응답)</p>
+            )}
           </div>
 
           {/* RAG Memory */}

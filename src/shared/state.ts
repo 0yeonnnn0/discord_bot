@@ -42,10 +42,15 @@ export interface UserStat {
   gotReplies: number;
 }
 
+export type ReplyMode = "auto" | "interval" | "mute";
+
 export interface Config {
   replyChance: number;
   aiProvider: string;
   model: string;
+  replyMode: ReplyMode;
+  judgeInterval: number;    // interval 모드: 타이머 (초)
+  judgeThreshold: number;   // interval 모드: 메시지 수
 }
 
 export interface State {
@@ -80,9 +85,12 @@ const saved = loadState();
 
 export const state: State = {
   config: {
-    replyChance: saved?.config?.replyChance ?? (parseFloat(process.env.REPLY_CHANCE || "") || 0.08),
+    replyChance: saved?.config?.replyChance ?? 0.08,
     aiProvider: saved?.config?.aiProvider ?? (process.env.AI_PROVIDER || "google"),
     model: saved?.config?.model ?? (process.env.GOOGLE_MODEL || process.env.ANTHROPIC_MODEL || process.env.OPENAI_MODEL || "gemini-2.5-flash-lite"),
+    replyMode: saved?.config?.replyMode ?? "auto",
+    judgeInterval: saved?.config?.judgeInterval ?? 120,
+    judgeThreshold: saved?.config?.judgeThreshold ?? 5,
   },
   stats: {
     messagesProcessed: saved?.stats?.messagesProcessed ?? 0,

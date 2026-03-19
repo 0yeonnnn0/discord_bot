@@ -74,14 +74,7 @@ router.get("/status", (_req: Request, res: Response) => {
 router.get("/config", (_req: Request, res: Response) => res.json(state.config));
 
 router.put("/config", (req: Request, res: Response) => {
-  const { replyChance, aiProvider, model } = req.body;
-  if (replyChance !== undefined) {
-    const value = parseFloat(replyChance);
-    if (isNaN(value) || value < 0 || value > 1) {
-      return res.status(400).json({ error: "replyChance는 0~1 사이 값이어야 합니다" });
-    }
-    state.config.replyChance = value;
-  }
+  const { aiProvider, model, replyMode, judgeInterval, judgeThreshold } = req.body;
   if (aiProvider !== undefined) {
     if (!["google", "openai", "anthropic"].includes(aiProvider)) {
       return res.status(400).json({ error: "잘못된 aiProvider" });
@@ -89,6 +82,22 @@ router.put("/config", (req: Request, res: Response) => {
     state.config.aiProvider = aiProvider;
   }
   if (model !== undefined) state.config.model = model;
+  if (replyMode !== undefined) {
+    if (!["auto", "interval", "mute"].includes(replyMode)) {
+      return res.status(400).json({ error: "replyMode는 auto, interval, mute 중 하나" });
+    }
+    state.config.replyMode = replyMode;
+  }
+  if (judgeInterval !== undefined) {
+    const v = parseInt(judgeInterval);
+    if (isNaN(v) || v < 10 || v > 600) return res.status(400).json({ error: "judgeInterval은 10~600초" });
+    state.config.judgeInterval = v;
+  }
+  if (judgeThreshold !== undefined) {
+    const v = parseInt(judgeThreshold);
+    if (isNaN(v) || v < 1 || v > 50) return res.status(400).json({ error: "judgeThreshold는 1~50" });
+    state.config.judgeThreshold = v;
+  }
   res.json(state.config);
 });
 

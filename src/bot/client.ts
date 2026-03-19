@@ -10,9 +10,16 @@ import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
 
-// Debounce: wait for same person to finish talking before AI judges
-const DEBOUNCE_MS = 1500;
-const judgeTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
+// Interval mode state: timer + message counter per channel
+interface ChannelJudgeState {
+  timer: ReturnType<typeof setTimeout>;
+  msgCount: number;
+}
+const judgeState = new Map<string, ChannelJudgeState>();
+
+// Auto mode debounce: 1.5s per person
+const AUTO_DEBOUNCE_MS = 1500;
+const autoTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; authorId: string }>();
 
 export const client = new Client({
   intents: [
@@ -99,6 +106,43 @@ function handleCommand(message: Message): boolean {
   return true;
 }
 
+// ── AI Judge trigger ──
+async function triggerJudge(channelId: string, message: Message, channelName: string, guildName: string): Promise<void> {
+  const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
+
+  const startTime = Date.now();
+  try {
+    const reply = await enqueue(async () => {
+      const channelHistory = history.getHistory(channelId);
+      const ragResults = await rag.searchRelevant(cleanContent);
+      const ragContext = rag.formatContext(ragResults);
+      return judgeAndReply(channelHistory, ragContext, message.author.id);
+    });
+
+    if (!reply) return;
+
+    markUserRequest(message.author.id);
+    const responseTime = Date.now() - startTime;
+
+    await message.reply(reply);
+    history.addMessage(channelId, { role: "assistant", content: reply });
+    state.stats.repliesSent++;
+    trackUser(message.author.id, message.author.displayName, true);
+
+    const lastLog = state.logs[state.logs.length - 1];
+    if (lastLog) {
+      lastLog.botReplied = true;
+      lastLog.triggerReason = "random";
+      lastLog.botReply = reply;
+      lastLog.responseTime = responseTime;
+      lastLog.model = lastUsedModel;
+    }
+  } catch (err) {
+    const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
+    addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}, guild: ${guildName}`);
+  }
+}
+
 // ── Message handler ──
 client.on("messageCreate", async (message: Message) => {
   if (message.author.bot) return;
@@ -146,62 +190,52 @@ client.on("messageCreate", async (message: Message) => {
     model: null,
   });
 
-  // Mentioned → always reply. Otherwise → debounce + let AI decide.
+  // Mentioned → always reply. Otherwise → mode-based auto-participation.
   if (!isMentioned) {
-    // Muted channel → skip auto-participation entirely
-    if (isChannelMuted(channelId)) return;
-    // Only debounce if same person is still talking (끊어 말하기 대기)
-    // Different person → let previous timer fire immediately, then start new one
-    const existing = judgeTimers.get(channelId);
-    if (existing) {
-      if (existing.authorId === message.author.id) {
-        // Same person still talking → reset timer
-        clearTimeout(existing.timer);
-      } else {
-        // Different person joined → let previous timer run, no reset
-        // (it will fire on its own)
+    const mode = state.config.replyMode;
+
+    // Mute mode → skip entirely
+    if (mode === "mute" || isChannelMuted(channelId)) return;
+
+    // Auto mode → AI judges every message (with per-person debounce)
+    if (mode === "auto") {
+      const existing = autoTimers.get(channelId);
+      if (existing) {
+        if (existing.authorId === message.author.id) {
+          clearTimeout(existing.timer);
+        }
       }
+      const timer = setTimeout(() => {
+        autoTimers.delete(channelId);
+        triggerJudge(channelId, message, channelName, guildName);
+      }, AUTO_DEBOUNCE_MS);
+      autoTimers.set(channelId, { timer, authorId: message.author.id });
+      return;
     }
 
-    // Wait for this person to finish, then let AI judge
-    const timer = setTimeout(async () => {
-      judgeTimers.delete(channelId);
-      if (!canUserRequest(message.author.id)) return;
+    // Interval mode → timer + message count trigger
+    if (mode === "interval") {
+      const intervalMs = state.config.judgeInterval * 1000;
+      const threshold = state.config.judgeThreshold;
+      const cs = judgeState.get(channelId);
 
-      const startTime = Date.now();
-      try {
-        const reply = await enqueue(async () => {
-          const channelHistory = history.getHistory(channelId);
-          const ragResults = await rag.searchRelevant(cleanContent);
-          const ragContext = rag.formatContext(ragResults);
-          return judgeAndReply(channelHistory, ragContext, message.author.id);
-        });
-
-        if (!reply) return;
-
-        markUserRequest(message.author.id);
-        const responseTime = Date.now() - startTime;
-
-        await message.reply(reply);
-        history.addMessage(channelId, { role: "assistant", content: reply });
-        state.stats.repliesSent++;
-        trackUser(message.author.id, message.author.displayName, true);
-
-        const lastLog = state.logs[state.logs.length - 1];
-        if (lastLog) {
-          lastLog.botReplied = true;
-          lastLog.triggerReason = "random";
-          lastLog.botReply = reply;
-          lastLog.responseTime = responseTime;
-          lastLog.model = lastUsedModel;
+      if (!cs) {
+        const timer = setTimeout(() => {
+          judgeState.delete(channelId);
+          triggerJudge(channelId, message, channelName, guildName);
+        }, intervalMs);
+        judgeState.set(channelId, { timer, msgCount: 1 });
+      } else {
+        cs.msgCount++;
+        if (cs.msgCount >= threshold) {
+          clearTimeout(cs.timer);
+          judgeState.delete(channelId);
+          triggerJudge(channelId, message, channelName, guildName);
         }
-      } catch (err) {
-        const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
-        addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}`);
       }
-    }, DEBOUNCE_MS);
+      return;
+    }
 
-    judgeTimers.set(channelId, { timer, authorId: message.author.id });
     return;
   }
 
