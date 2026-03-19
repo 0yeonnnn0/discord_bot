@@ -14,6 +14,9 @@ const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemma-3-27b-it', label: 'Gemma 3 27B (Fallback)' },
+    { value: 'gemma-3-12b-it', label: 'Gemma 3 12B' },
+    { value: 'gemma-3-4b-it', label: 'Gemma 3 4B' },
   ],
   openai: [
     { value: 'gpt-4o', label: 'GPT-4o' },

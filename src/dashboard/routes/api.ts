@@ -7,7 +7,7 @@ import {
   upsertPreset, deletePreset, getActivePrompt,
 } from "../../bot/prompt";
 import { getStats as getRagStats, listVectors, searchRelevant, storeConversation, initIndex } from "../../bot/rag";
-import { getReply } from "../../bot/ai";
+import { getReply, callAI } from "../../bot/ai";
 import { getQueueStats } from "../../bot/queue";
 import { addChatLog, getChatLogs, getChatLogStats } from "../chat-logs";
 import fs from "fs";
@@ -39,49 +39,8 @@ router.post("/chat/send", async (req: Request, res: Response) => {
     }));
     chatHistory.push({ role: "user" as const, content: `${nickname || "익명"}: ${message}` });
 
-    const provider = state.config.aiProvider;
-    const model = state.config.model;
-
-    // Use getReply but with custom prompt from the preset
     const prompt = preset.prompt + (preset.userSuffix || "");
-
-    let reply: string;
-    switch (provider) {
-      case "anthropic": {
-        const Anthropic = require("@anthropic-ai/sdk");
-        const client = new Anthropic();
-        const response = await client.messages.create({
-          model: model || "claude-sonnet-4-20250514",
-          max_tokens: 512,
-          system: prompt,
-          messages: chatHistory,
-        });
-        reply = response.content[0].text;
-        break;
-      }
-      case "openai": {
-        const OpenAI = require("openai");
-        const client = new OpenAI();
-        const messages = [{ role: "system" as const, content: prompt }, ...chatHistory];
-        const response = await client.chat.completions.create({ model: model || "gpt-4o", max_tokens: 512, messages });
-        reply = response.choices[0].message.content;
-        break;
-      }
-      case "google": {
-        const { GoogleGenerativeAI } = require("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const m = genAI.getGenerativeModel({ model: model || "gemini-2.5-flash-lite", systemInstruction: prompt });
-        const contents = chatHistory.map((msg: any) => ({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }],
-        }));
-        const result = await m.generateContent({ contents });
-        reply = result.response.text();
-        break;
-      }
-      default:
-        return res.status(500).json({ error: `지원하지 않는 AI 제공자: ${provider}` });
-    }
+    const reply = await callAI(chatHistory, prompt);
 
     // Log the chat
     addChatLog({
