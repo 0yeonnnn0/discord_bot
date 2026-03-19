@@ -34,7 +34,6 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 function App() {
   const location = useLocation()
   const isChat = location.pathname.startsWith('/chat')
-  const isLogin = location.pathname === '/admin/login'
 
   return (
     <>
