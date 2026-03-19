@@ -62,7 +62,7 @@ client.on("guildMemberAdd", async (member) => {
     const reply = await getReply(history, "", "");
     await channel.send(`${member} ${reply}`);
   } catch {
-    await channel.send(`${member} 어서와!`).catch(() => {});
+    await channel.send(`${member} 어서오라냥! >w<`).catch(() => {});
   }
 });
 client.on("guildDelete", (guild) => addEvent("guild_leave", guild.name));
@@ -223,7 +223,7 @@ client.on("messageCreate", async (message: Message) => {
     if (waitingCancelled) return;
     waitingSending = true;
     try {
-      const msg = await message.reply("잠시만...");
+      const msg = await message.reply("잠시 기다려달라냥... 0w0");
       if (waitingCancelled) {
         await msg.delete().catch(() => {});
       } else {
