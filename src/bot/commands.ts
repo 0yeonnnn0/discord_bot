@@ -262,11 +262,12 @@ async function handleDraw(interaction: ChatInputCommandInteraction): Promise<voi
   await interaction.deferReply();
 
   try {
-    const attachment = await generateImage(prompt, quality);
-    if (attachment) {
+    const result = await generateImage(prompt, quality);
+    if (result) {
+      const label = result.usedModel !== quality ? ` (${result.usedModel} fallback)` : "";
       await interaction.editReply({
-        content: `**${prompt}**`,
-        files: [attachment],
+        content: `**${prompt}**${label}`,
+        files: [result.attachment],
       });
     } else {
       await interaction.editReply("이미지 생성에 실패했어. 다른 프롬프트로 다시 시도해봐.");
