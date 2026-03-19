@@ -65,16 +65,16 @@ export default function Logs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead style={{ width: 80 }}>Time</TableHead>
-                <TableHead style={{ width: 100 }}>Server</TableHead>
-                <TableHead style={{ width: 100 }}>Channel</TableHead>
-                <TableHead style={{ width: 90 }}>Author</TableHead>
-                <TableHead style={{ width: 300 }}>Message</TableHead>
-                <TableHead style={{ width: 60 }}>Trigger</TableHead>
-                <TableHead style={{ width: 50 }}>RAG</TableHead>
-                <TableHead style={{ width: 55 }}>Speed</TableHead>
-                <TableHead style={{ width: 100 }}>Model</TableHead>
-                <TableHead style={{ width: 400 }}>Bot Reply</TableHead>
+                <TableHead style={{ minWidth: 80 }}>Time</TableHead>
+                <TableHead style={{ minWidth: 100 }}>Server</TableHead>
+                <TableHead style={{ minWidth: 100 }}>Channel</TableHead>
+                <TableHead style={{ minWidth: 90 }}>Author</TableHead>
+                <TableHead style={{ minWidth: 300 }}>Message</TableHead>
+                <TableHead style={{ minWidth: 60 }}>Trigger</TableHead>
+                <TableHead style={{ minWidth: 50 }}>RAG</TableHead>
+                <TableHead style={{ minWidth: 55 }}>Speed</TableHead>
+                <TableHead style={{ minWidth: 100 }}>Model</TableHead>
+                <TableHead style={{ minWidth: 400 }}>Bot Reply</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -127,12 +127,12 @@ export default function Logs() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead style={{ width: 80 }}>Time</TableHead>
-              <TableHead style={{ width: 90 }}>Character</TableHead>
-              <TableHead style={{ width: 90 }}>Nickname</TableHead>
-              <TableHead>User Message</TableHead>
-              <TableHead style={{ width: 100 }}>Model</TableHead>
-              <TableHead style={{ width: 350 }}>Bot Reply</TableHead>
+              <TableHead style={{ minWidth: 80 }}>Time</TableHead>
+              <TableHead style={{ minWidth: 90 }}>Character</TableHead>
+              <TableHead style={{ minWidth: 90 }}>Nickname</TableHead>
+              <TableHead style={{ minWidth: 250 }}>User Message</TableHead>
+              <TableHead style={{ minWidth: 100 }}>Model</TableHead>
+              <TableHead style={{ minWidth: 400 }}>Bot Reply</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
