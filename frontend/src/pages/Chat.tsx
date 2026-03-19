@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { newRandomNick } from 'random-korean-nickname'
 
 interface Character {
   id: string
@@ -9,17 +10,6 @@ interface Character {
 interface Message {
   role: 'user' | 'assistant'
   content: string
-}
-
-const RANDOM_NAMES = [
-  '지나가던시민', '배고픈판다', '졸린고양이', '익명의토끼',
-  '카페인중독자', '야근전사', '치킨마니아', '낮잠요정',
-  '떡볶이킬러', '산책하는곰', '밤올빼미', '라면장인',
-  '귀찮은나무늘보', '호기심대장', '감자튀김도둑',
-]
-
-function getRandomName(): string {
-  return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]
 }
 
 function getSessionId(): string {
@@ -37,7 +27,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [nickname, setNickname] = useState(() => getRandomName())
+  const [nickname, setNickname] = useState(() => newRandomNick())
   const [editingNickname, setEditingNickname] = useState(false)
   const [nicknameInput, setNicknameInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
