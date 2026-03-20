@@ -682,43 +682,32 @@ input[type="range"] {
 .btn-group { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-5); }
 
 /* ═══════ Settings Layout ═══════ */
-.settings-layout {
+.settings-tabs {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-6);
 }
 
-.settings-sidebar {
-  position: sticky;
-  top: 72px;
-  width: 140px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) 0;
-}
-
-.settings-sidebar-link {
-  display: block;
-  padding: 7px 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
+.settings-tab {
+  padding: 10px 20px;
+  font-size: 0.87rem;
   color: var(--text-tertiary);
-  text-decoration: none;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-  border-left: 2px solid transparent;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-weight: 500;
 }
 
-.settings-sidebar-link:hover {
+.settings-tab:hover {
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.02);
-  border-left-color: var(--border-hover);
 }
 
-.settings-sidebar-link:active {
+.settings-tab.active {
   color: var(--accent);
-  border-left-color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .settings-main {
@@ -726,22 +715,13 @@ input[type="range"] {
   min-width: 0;
 }
 
-@media (max-width: 1000px) {
-  .settings-layout { flex-direction: column; }
-  .settings-sidebar {
-    position: static;
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--space-2);
+@media (max-width: 600px) {
+  .settings-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 0.8rem;
   }
-  .settings-sidebar-link {
-    border-left: none;
-    border-bottom: 2px solid transparent;
-    padding: 6px 10px;
-    font-size: 0.75rem;
-  }
-  .settings-sidebar-link:hover { border-bottom-color: var(--border-hover); }
 }
 
 /* ═══════ Command Center ═══════ */

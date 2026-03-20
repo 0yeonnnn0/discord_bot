@@ -55,6 +55,11 @@ export interface Config {
   // 웹 채팅 설정
   webShowNickname: boolean;    // AI에게 닉네임 포함해서 보내기
   webSystemPrompt: string;     // 웹 채팅 전용 추가 프롬프트
+  // API 키 (웹에서 관리, .env fallback)
+  googleApiKey?: string;
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+  dashboardSecret?: string;
 }
 
 export interface State {
@@ -98,6 +103,10 @@ export const state: State = {
     judgePrompt: saved?.config?.judgePrompt ?? "",
     webShowNickname: saved?.config?.webShowNickname ?? false,
     webSystemPrompt: saved?.config?.webSystemPrompt ?? "",
+    googleApiKey: saved?.config?.googleApiKey ?? (process.env.GOOGLE_API_KEY || ""),
+    openaiApiKey: saved?.config?.openaiApiKey ?? (process.env.OPENAI_API_KEY || ""),
+    anthropicApiKey: saved?.config?.anthropicApiKey ?? (process.env.ANTHROPIC_API_KEY || ""),
+    dashboardSecret: saved?.config?.dashboardSecret ?? (process.env.DASHBOARD_SECRET || ""),
   },
   stats: {
     messagesProcessed: saved?.stats?.messagesProcessed ?? 0,

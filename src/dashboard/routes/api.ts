@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { client } from "../../bot/client";
-import { state, getTopKeywords, getUserStatsRanked } from "../../shared/state";
+import { state, saveState, getTopKeywords, getUserStatsRanked } from "../../shared/state";
 import {
   getPresets, getPreset, getActivePresetId, setActivePreset,
   upsertPreset, deletePreset, togglePreset, reorderPresets, getActivePrompt,
@@ -62,6 +62,16 @@ router.post("/chat/send", async (req: Request, res: Response) => {
   }
 });
 
+function maskKey(key: string | undefined): string {
+  if (!key || key.length < 8) return key ? "****" : "";
+  return key.slice(0, 4) + "..." + key.slice(-3);
+}
+
+function safeConfig() {
+  const { googleApiKey, openaiApiKey, anthropicApiKey, dashboardSecret, ...safe } = state.config;
+  return safe;
+}
+
 router.get("/status", (_req: Request, res: Response) => {
   res.json({
     online: client.isReady(),
@@ -69,11 +79,31 @@ router.get("/status", (_req: Request, res: Response) => {
     guilds: client.guilds?.cache.size || 0,
     stats: state.stats,
     queue: getQueueStats(),
-    config: state.config,
+    config: safeConfig(),
   });
 });
 
-router.get("/config", (_req: Request, res: Response) => res.json({ ...state.config, defaultJudgePrompt: DEFAULT_JUDGE_PROMPT }));
+router.get("/config", (_req: Request, res: Response) => res.json({ ...safeConfig(), defaultJudgePrompt: DEFAULT_JUDGE_PROMPT }));
+
+// ── API Keys (masked read / update) ──
+router.get("/keys", (_req: Request, res: Response) => {
+  res.json({
+    googleApiKey: maskKey(state.config.googleApiKey || process.env.GOOGLE_API_KEY),
+    openaiApiKey: maskKey(state.config.openaiApiKey || process.env.OPENAI_API_KEY),
+    anthropicApiKey: maskKey(state.config.anthropicApiKey || process.env.ANTHROPIC_API_KEY),
+    dashboardSecret: maskKey(state.config.dashboardSecret || process.env.DASHBOARD_SECRET),
+  });
+});
+
+router.put("/keys", (req: Request, res: Response) => {
+  const { googleApiKey, openaiApiKey, anthropicApiKey, dashboardSecret } = req.body;
+  if (googleApiKey !== undefined && googleApiKey !== "") state.config.googleApiKey = googleApiKey;
+  if (openaiApiKey !== undefined && openaiApiKey !== "") state.config.openaiApiKey = openaiApiKey;
+  if (anthropicApiKey !== undefined && anthropicApiKey !== "") state.config.anthropicApiKey = anthropicApiKey;
+  if (dashboardSecret !== undefined && dashboardSecret !== "") state.config.dashboardSecret = dashboardSecret;
+  saveState();
+  res.json({ ok: true });
+});
 
 router.put("/config", (req: Request, res: Response) => {
   const { aiProvider, model, replyMode, judgeInterval, judgeThreshold } = req.body;
@@ -109,7 +139,7 @@ router.put("/config", (req: Request, res: Response) => {
   if (req.body.webSystemPrompt !== undefined) {
     state.config.webSystemPrompt = req.body.webSystemPrompt;
   }
-  res.json(state.config);
+  res.json(safeConfig());
 });
 
 router.get("/logs", (req: Request, res: Response) => {
@@ -130,6 +160,13 @@ router.get("/errors", (_req: Request, res: Response) => res.json(state.errors.sl
 // Presets
 router.get("/presets", (_req: Request, res: Response) => {
   res.json({ presets: getPresets(), activeId: getActivePresetId() });
+});
+
+router.put("/presets/reorder", (req: Request, res: Response) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: "ids 배열 필요" });
+  reorderPresets(ids);
+  res.json({ ok: true });
 });
 
 router.get("/presets/:id", (req: Request, res: Response) => {
@@ -163,13 +200,6 @@ router.post("/presets", (req: Request, res: Response) => {
 
 router.delete("/presets/:id", (req: Request, res: Response) => {
   if (!deletePreset(req.params.id as string)) return res.status(400).json({ error: "프리셋을 찾을 수 없습니다" });
-  res.json({ ok: true });
-});
-
-router.put("/presets/reorder", (req: Request, res: Response) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids)) return res.status(400).json({ error: "ids 배열 필요" });
-  reorderPresets(ids);
   res.json({ ok: true });
 });
 
