@@ -58,12 +58,12 @@ export async function fetchUrlContext(text: string): Promise<string> {
   const results = await Promise.all(
     urls.slice(0, 3).map(async (url) => {
       const content = await fetchPage(url);
-      return content ? `[링크: ${url}]\n${content}` : null;
+      return content ? `<web_content url="${url}">\n${content}\n</web_content>` : null;
     })
   );
 
   const valid = results.filter(Boolean);
   if (valid.length === 0) return "";
 
-  return "\n\n[참고 링크 내용]\n" + valid.join("\n\n");
+  return "\n" + valid.join("\n");
 }
