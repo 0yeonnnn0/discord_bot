@@ -37,6 +37,7 @@ export default function Settings() {
   const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [judgePrompt, setJudgePrompt] = useState('')
   const [defaultJudgePrompt, setDefaultJudgePrompt] = useState('')
+  const [imageRecognition, setImageRecognition] = useState(true)
   const [webShowNickname, setWebShowNickname] = useState(false)
   const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
@@ -65,7 +66,7 @@ export default function Settings() {
     fetch('/api/presets').then(r => r.json()).then(d => {
       setPresets(d.presets)
       setActivePresetId(d.activeId)
-    })
+    }).catch(() => toast.error('프리셋 로드 실패'))
   }
 
   useEffect(() => {
@@ -77,13 +78,14 @@ export default function Settings() {
       setJudgeThreshold(d.judgeThreshold || 5)
       setJudgePrompt(d.judgePrompt || '')
       setDefaultJudgePrompt(d.defaultJudgePrompt || '')
+      setImageRecognition(d.imageRecognition ?? true)
       setWebShowNickname(d.webShowNickname ?? false)
       setWebSystemPrompt(d.webSystemPrompt || '')
-    })
+    }).catch(() => toast.error('설정 로드 실패'))
     fetchPresets()
-    fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
-    fetch('/api/rag/timeline').then(r => r.json()).then(setTimeline)
-    fetch('/api/keys').then(r => r.json()).then(setApiKeys)
+    fetch('/api/rag-stats').then(r => r.json()).then(setRagStats).catch(() => {})
+    fetch('/api/rag/timeline').then(r => r.json()).then(setTimeline).catch(() => {})
+    fetch('/api/keys').then(r => r.json()).then(setApiKeys).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -92,93 +94,104 @@ export default function Settings() {
 
   // 프리셋 선택하면 프롬프트 로드
   const selectPreset = async (id: string) => {
-    const res = await fetch(`/api/presets/${id}`)
-    if (res.ok) {
-      const data = await res.json()
-      setEditingPreset(data)
-    }
+    try {
+      const res = await fetch(`/api/presets/${id}`)
+      if (res.ok) setEditingPreset(await res.json())
+    } catch { toast.error('프리셋 로드 실패') }
   }
 
   const activatePreset = async (id: string) => {
-    const res = await fetch(`/api/presets/${id}/activate`, { method: 'PUT' })
-    if (res.ok) {
-      setActivePresetId(id)
-      toast.success(`프리셋 "${presets.find(p => p.id === id)?.name}" 활성화`)
-      fetchPresets()
-    }
+    try {
+      const res = await fetch(`/api/presets/${id}/activate`, { method: 'PUT' })
+      if (res.ok) {
+        setActivePresetId(id)
+        toast.success(`프리셋 "${presets.find(p => p.id === id)?.name}" 활성화`)
+        fetchPresets()
+      }
+    } catch { toast.error('프리셋 활성화 실패') }
   }
 
   const togglePresetEnabled = async (id: string, enabled: boolean) => {
-    const res = await fetch(`/api/presets/${id}/toggle`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled }),
-    })
-    if (res.ok) {
-      toast.success(enabled ? '프리셋 활성화' : '프리셋 비활성화')
-      fetchPresets()
-    }
+    try {
+      const res = await fetch(`/api/presets/${id}/toggle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      })
+      if (res.ok) {
+        toast.success(enabled ? '프리셋 활성화' : '프리셋 비활성화')
+        fetchPresets()
+      }
+    } catch { toast.error('프리셋 토글 실패') }
   }
 
   const savePreset = async () => {
     if (!editingPreset) return
-    const res = await fetch(`/api/presets/${editingPreset.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingPreset),
-    })
-    if (res.ok) {
-      toast.success('프리셋 저장 완료')
-      fetchPresets()
-    }
+    try {
+      const res = await fetch(`/api/presets/${editingPreset.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingPreset),
+      })
+      if (res.ok) { toast.success('프리셋 저장 완료'); fetchPresets() }
+      else toast.error('프리셋 저장 실패')
+    } catch { toast.error('프리셋 저장 실패') }
   }
 
   const createPreset = async () => {
     const name = prompt('새 프리셋 이름:')
     if (!name) return
     const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    const res = await fetch('/api/presets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, name, description: '', prompt: '', ownerSuffix: '', userSuffix: '' }),
-    })
-    if (res.ok) {
-      toast.success(`프리셋 "${name}" 생성`)
-      fetchPresets()
-      selectPreset(id)
-    }
+    try {
+      const res = await fetch('/api/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, description: '', prompt: '', ownerSuffix: '', userSuffix: '' }),
+      })
+      if (res.ok) {
+        toast.success(`프리셋 "${name}" 생성`)
+        fetchPresets()
+        selectPreset(id)
+      }
+    } catch { toast.error('프리셋 생성 실패') }
   }
 
   const deletePreset = async (id: string) => {
     if (!confirm('삭제하시겠습니까?')) return
-    const res = await fetch(`/api/presets/${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      toast.success('프리셋 삭제됨')
-      setEditingPreset(null)
-      fetchPresets()
-    } else {
-      const data = await res.json()
-      toast.error(data.error)
-    }
+    try {
+      const res = await fetch(`/api/presets/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('프리셋 삭제됨')
+        setEditingPreset(null)
+        fetchPresets()
+      } else {
+        const data = await res.json()
+        toast.error(data.error)
+      }
+    } catch { toast.error('프리셋 삭제 실패') }
   }
 
   const saveReplyMode = async () => {
-    const res = await fetch('/api/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold, judgePrompt }),
-    })
-    const labels: Record<string, string> = { auto: '자동', interval: '간격', mute: '음소거' }
-    res.ok ? toast.success(`응답 모드: ${labels[replyMode]}`) : toast.error('저장 실패')
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyMode, judgeInterval, judgeThreshold, judgePrompt }),
+      })
+      const labels: Record<string, string> = { auto: '자동', interval: '간격', mute: '음소거' }
+      res.ok ? toast.success(`응답 모드: ${labels[replyMode]}`) : toast.error('저장 실패')
+    } catch { toast.error('저장 실패') }
   }
 
   const saveModel = async () => {
-    const res = await fetch('/api/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ aiProvider: provider, model }),
-    })
-    res.ok ? toast.success(`모델 변경: ${model}`) : toast.error('저장 실패')
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aiProvider: provider, model }),
+      })
+      res.ok ? toast.success(`모델 변경: ${model}`) : toast.error('저장 실패')
+    } catch { toast.error('저장 실패') }
   }
 
   const sendTest = async () => {
@@ -204,7 +217,7 @@ export default function Settings() {
   // RAG 벡터 로드
   useEffect(() => {
     if (ragView === 'vectors' && vectors.length === 0) {
-      fetch('/api/rag/vectors').then(r => r.json()).then(setVectors)
+      fetch('/api/rag/vectors').then(r => r.json()).then(setVectors).catch(() => {})
     }
   }, [ragView])
 
@@ -268,11 +281,13 @@ export default function Settings() {
 
   const clearRag = async () => {
     if (!confirm('RAG 데이터를 전부 삭제하시겠습니까?')) return
-    const res = await fetch('/api/rag', { method: 'DELETE' })
-    if (res.ok) {
-      toast.success('RAG 초기화 완료')
-      fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
-    }
+    try {
+      const res = await fetch('/api/rag', { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('RAG 초기화 완료')
+        fetch('/api/rag-stats').then(r => r.json()).then(setRagStats).catch(() => {})
+      }
+    } catch { toast.error('RAG 초기화 실패') }
   }
 
   const saveKeys = async () => {
@@ -281,13 +296,30 @@ export default function Settings() {
       if (value !== undefined && value !== '') updates[key] = value
     }
     if (Object.keys(updates).length === 0) { toast('변경된 키가 없습니다'); return }
-    const res = await fetch('/api/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
-    if (res.ok) {
-      toast.success('API 키 저장 완료')
-      const d = await fetch('/api/keys').then(r => r.json())
-      setApiKeys(d)
-      setEditingKeys({})
-    } else toast.error('저장 실패')
+    try {
+      const res = await fetch('/api/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+      if (res.ok) {
+        toast.success('API 키 저장 완료')
+        const d = await fetch('/api/keys').then(r => r.json())
+        setApiKeys(d)
+        setEditingKeys({})
+      } else toast.error('저장 실패')
+    } catch { toast.error('저장 실패') }
+  }
+
+  const [testingKey, setTestingKey] = useState<string | null>(null)
+  const testApiKey = async (provider: string) => {
+    setTestingKey(provider)
+    try {
+      const res = await fetch('/api/keys/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const data = await res.json()
+      data.ok ? toast.success(`${provider} 키 유효`) : toast.error(data.error || '키 검증 실패')
+    } catch { toast.error('키 검증 실패') }
+    setTestingKey(null)
   }
 
   const models = MODEL_OPTIONS[provider] || []
@@ -354,6 +386,22 @@ export default function Settings() {
                 <span className="model-info-value mono">gemini-embedding-002</span>
                 <span className="model-info-badge fixed">고정</span>
               </div>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={imageRecognition}
+                  onChange={e => {
+                    setImageRecognition(e.target.checked)
+                    fetch('/api/config', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ imageRecognition: e.target.checked }),
+                    }).then(() => toast.success(e.target.checked ? '이미지 인식 켜짐' : '이미지 인식 꺼짐')).catch(() => {})
+                  }} />
+                이미지 인식 (Gemini Vision)
+              </label>
+              <p className="form-hint">디스코드에 첨부된 이미지를 AI가 인식하여 대화에 반영합니다. Google 모델에서만 동작.</p>
             </div>
           </div>
 
@@ -459,20 +507,29 @@ export default function Settings() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {[
-                { key: 'googleApiKey', label: 'Google API Key', hint: 'Gemini / Gemma 모델에 필요' },
-                { key: 'openaiApiKey', label: 'OpenAI API Key', hint: 'GPT 모델에 필요' },
-                { key: 'anthropicApiKey', label: 'Anthropic API Key', hint: 'Claude 모델에 필요' },
-                { key: 'dashboardSecret', label: 'Dashboard Password', hint: '대시보드 로그인 비밀번호 (변경 시 새 로그인부터 적용)' },
-              ].map(({ key, label, hint }) => (
+                { key: 'googleApiKey', label: 'Google API Key', hint: 'Gemini / Gemma 모델에 필요', testProvider: 'google' },
+                { key: 'openaiApiKey', label: 'OpenAI API Key', hint: 'GPT 모델에 필요', testProvider: 'openai' },
+                { key: 'anthropicApiKey', label: 'Anthropic API Key', hint: 'Claude 모델에 필요', testProvider: 'anthropic' },
+                { key: 'dashboardSecret', label: 'Dashboard Password', hint: '대시보드 로그인 비밀번호 (변경 시 새 로그인부터 적용)', testProvider: '' },
+              ].map(({ key, label, hint, testProvider }) => (
                 <div key={key}>
                   <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>{label}</div>
-                  <input type="text"
-                    value={editingKeys[key] !== undefined ? editingKeys[key] : apiKeys[key] || ''}
-                    onChange={e => setEditingKeys(prev => ({ ...prev, [key]: e.target.value }))}
-                    onFocus={() => { if (editingKeys[key] === undefined) setEditingKeys(prev => ({ ...prev, [key]: '' })) }}
-                    placeholder={apiKeys[key] ? `현재: ${apiKeys[key]}` : '설정되지 않음'}
-                    spellCheck={false} autoComplete="off"
-                    style={{ fontFamily: 'var(--mono)' }} />
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <input type="text"
+                      value={editingKeys[key] !== undefined ? editingKeys[key] : apiKeys[key] || ''}
+                      onChange={e => setEditingKeys(prev => ({ ...prev, [key]: e.target.value }))}
+                      onFocus={() => { if (editingKeys[key] === undefined) setEditingKeys(prev => ({ ...prev, [key]: '' })) }}
+                      placeholder={apiKeys[key] ? `현재: ${apiKeys[key]}` : '설정되지 않음'}
+                      spellCheck={false} autoComplete="off"
+                      style={{ fontFamily: 'var(--mono)', flex: 1 }} />
+                    {testProvider && (
+                      <button className="btn btn-ghost" onClick={() => testApiKey(testProvider)}
+                        disabled={testingKey === testProvider}
+                        style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                        {testingKey === testProvider ? 'Testing...' : 'Test'}
+                      </button>
+                    )}
+                  </div>
                   <p className="form-hint">{hint}</p>
                 </div>
               ))}

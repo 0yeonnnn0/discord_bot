@@ -6,6 +6,26 @@ import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../
 import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
 import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted } from "./commands";
+import { fetchUrlContext } from "./scrape";
+import type { ImageData } from "./history";
+
+const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+
+async function extractImage(message: Message): Promise<ImageData | undefined> {
+  if (!state.config.imageRecognition) return undefined;
+  const attachment = message.attachments.find(
+    a => a.contentType && IMAGE_MIMES.has(a.contentType) && (a.size || 0) <= MAX_IMAGE_SIZE
+  );
+  if (!attachment) return undefined;
+  try {
+    const res = await fetch(attachment.url);
+    const buf = Buffer.from(await res.arrayBuffer());
+    return { mimeType: attachment.contentType!, data: buf.toString("base64") };
+  } catch {
+    return undefined;
+  }
+}
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
@@ -112,24 +132,32 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
 
   const startTime = Date.now();
   try {
+    let ragHitCount = 0;
     const reply = await enqueue(async () => {
       const channelHistory = history.getHistory(channelId);
       const ragResults = await rag.searchRelevant(cleanContent);
-      const ragContext = rag.formatContext(ragResults);
+      ragHitCount = ragResults.length;
+      const urlContext = await fetchUrlContext(cleanContent);
+      const ragContext = rag.formatContext(ragResults) + urlContext;
       return judgeAndReply(channelHistory, ragContext, message.author.id);
     });
 
     const responseTime = Date.now() - startTime;
 
     if (!reply) {
-      // AI decided to skip — log it
-      const lastLog = state.logs[state.logs.length - 1];
-      if (lastLog) {
-        lastLog.triggerReason = "random";
-        lastLog.botReply = "<SKIP>";
-        lastLog.responseTime = responseTime;
-        lastLog.model = lastUsedModel;
-      }
+      addLog({
+        guild: guildName,
+        channel: channelName,
+        author: message.author.displayName,
+        content: cleanContent,
+        botReplied: false,
+        triggerReason: "random",
+        botReply: "<SKIP>",
+        responseTime,
+        ragHits: ragHitCount,
+        error: null,
+        model: lastUsedModel,
+      });
       return;
     }
 
@@ -146,6 +174,7 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
       lastLog.triggerReason = "random";
       lastLog.botReply = reply;
       lastLog.responseTime = responseTime;
+      lastLog.ragHits = ragHitCount;
       lastLog.model = lastUsedModel;
     }
   } catch (err) {
@@ -164,9 +193,12 @@ client.on("messageCreate", async (message: Message) => {
   const channelName = "name" in message.channel ? (message.channel as any).name as string : "unknown";
   const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
 
+  const imageData = await extractImage(message);
+
   history.addMessage(channelId, {
     role: "user",
-    content: `${message.author.displayName}: ${cleanContent}`,
+    content: `${message.author.displayName}: ${cleanContent}${imageData ? " [이미지 첨부]" : ""}`,
+    imageData,
   });
 
   state.stats.messagesProcessed++;
@@ -294,7 +326,8 @@ client.on("messageCreate", async (message: Message) => {
       const channelHistory = history.getHistory(channelId);
       const ragResults = await rag.searchRelevant(cleanContent);
       ragHitCount = ragResults.length;
-      const ragContext = rag.formatContext(ragResults);
+      const urlContext = await fetchUrlContext(cleanContent);
+      const ragContext = rag.formatContext(ragResults) + urlContext;
       return getReply(channelHistory, ragContext, message.author.id);
     });
 
