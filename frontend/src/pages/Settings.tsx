@@ -388,13 +388,18 @@ export default function Settings() {
             )}
             {replyMode === 'auto' && (
               <div>
-                <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>AI 판단 프롬프트</div>
-                <textarea rows={12} value={judgePrompt}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                  <div className="card-label" style={{ marginBottom: 0 }}>AI 판단 프롬프트</div>
+                  {judgePrompt && (
+                    <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.65rem' }}
+                      onClick={() => setJudgePrompt('')}>기본값으로 초기화</button>
+                  )}
+                </div>
+                <textarea rows={14} value={judgePrompt || defaultJudgePrompt}
                   onChange={e => setJudgePrompt(e.target.value)}
-                  placeholder={defaultJudgePrompt || '기본 프롬프트 로딩 중...'}
                   spellCheck={false}
-                  style={{ minHeight: '220px' }} />
-                <p className="form-hint">비워두면 위 placeholder의 기본 프롬프트가 사용됨. 반드시 &lt;SKIP&gt; 응답 조건을 포함해야 함.</p>
+                  style={{ minHeight: '260px' }} />
+                <p className="form-hint">봇이 자동으로 끼어들지 판단하는 프롬프트. 반드시 &lt;SKIP&gt; 응답 조건을 포함해야 함.</p>
               </div>
             )}
             {replyMode === 'mute' && (
@@ -424,11 +429,11 @@ export default function Settings() {
             </div>
             <div>
               <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>웹 채팅 추가 프롬프트</div>
-              <textarea rows={4} value={webSystemPrompt}
+              <textarea rows={8} value={webSystemPrompt}
                 onChange={e => setWebSystemPrompt(e.target.value)}
                 placeholder="웹 채팅에서만 프리셋 뒤에 추가되는 프롬프트 (선택사항)"
                 spellCheck={false}
-                style={{ minHeight: '80px' }} />
+                style={{ minHeight: '150px' }} />
               <p className="form-hint">프리셋 프롬프트 뒤에 추가됨. 웹 채팅 전용 규칙을 넣을 때 사용.</p>
             </div>
           </div>
@@ -755,13 +760,13 @@ export default function Settings() {
           </button>
         ) : (
           <div className="float-chat-window">
-            <div className="float-chat-header">
+            <div className="float-chat-header" onClick={() => setChatOpen(false)} style={{ cursor: 'pointer' }}>
               <span>Live Test</span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {messages.length > 0 && (
-                  <button className="float-chat-header-btn" onClick={() => setMessages([])}>Clear</button>
+                  <button className="float-chat-header-btn" onClick={e => { e.stopPropagation(); setMessages([]) }}>Clear</button>
                 )}
-                <button className="float-chat-header-btn" onClick={() => setChatOpen(false)}>✕</button>
+                <button className="float-chat-header-btn" onClick={e => { e.stopPropagation(); setChatOpen(false) }}>✕</button>
               </div>
             </div>
             <div className="float-chat-messages">
