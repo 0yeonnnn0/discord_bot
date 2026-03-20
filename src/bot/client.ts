@@ -122,14 +122,20 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
     const responseTime = Date.now() - startTime;
 
     if (!reply) {
-      // AI decided to skip — log it
-      const lastLog = state.logs[state.logs.length - 1];
-      if (lastLog) {
-        lastLog.triggerReason = "random";
-        lastLog.botReply = "<SKIP>";
-        lastLog.responseTime = responseTime;
-        lastLog.model = lastUsedModel;
-      }
+      // AI decided to skip — add dedicated log entry
+      addLog({
+        guild: guildName,
+        channel: channelName,
+        author: message.author.displayName,
+        content: cleanContent,
+        botReplied: false,
+        triggerReason: "random",
+        botReply: "<SKIP>",
+        responseTime,
+        ragHits: 0,
+        error: null,
+        model: lastUsedModel,
+      });
       return;
     }
 

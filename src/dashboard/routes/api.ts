@@ -10,6 +10,7 @@ import { getStats as getRagStats, listVectors, searchRelevant, storeConversation
 import { getReply, callAI, lastUsedModel, DEFAULT_JUDGE_PROMPT } from "../../bot/ai";
 import { getQueueStats } from "../../bot/queue";
 import { addChatLog, getChatLogs, getChatLogStats } from "../chat-logs";
+import { maskKey } from "../../shared/keys";
 import fs from "fs";
 import path from "path";
 
@@ -62,11 +63,6 @@ router.post("/chat/send", async (req: Request, res: Response) => {
   }
 });
 
-function maskKey(key: string | undefined): string {
-  if (!key || key.length < 8) return key ? "****" : "";
-  return key.slice(0, 4) + "..." + key.slice(-3);
-}
-
 function safeConfig() {
   const { googleApiKey, openaiApiKey, anthropicApiKey, dashboardSecret, ...safe } = state.config;
   return safe;
@@ -103,6 +99,39 @@ router.put("/keys", (req: Request, res: Response) => {
   if (dashboardSecret !== undefined && dashboardSecret !== "") state.config.dashboardSecret = dashboardSecret;
   saveState();
   res.json({ ok: true });
+});
+
+router.post("/keys/test", async (req: Request, res: Response) => {
+  const { provider } = req.body;
+  try {
+    if (provider === "google") {
+      const key = state.config.googleApiKey || process.env.GOOGLE_API_KEY;
+      if (!key) return res.json({ ok: false, error: "Google API 키가 설정되지 않음" });
+      const { GoogleGenerativeAI } = require("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(key);
+      const m = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+      await m.generateContent({ contents: [{ role: "user", parts: [{ text: "ping" }] }] });
+      res.json({ ok: true });
+    } else if (provider === "openai") {
+      const key = state.config.openaiApiKey || process.env.OPENAI_API_KEY;
+      if (!key) return res.json({ ok: false, error: "OpenAI API 키가 설정되지 않음" });
+      const OpenAI = require("openai");
+      const client = new OpenAI({ apiKey: key });
+      await client.models.list();
+      res.json({ ok: true });
+    } else if (provider === "anthropic") {
+      const key = state.config.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+      if (!key) return res.json({ ok: false, error: "Anthropic API 키가 설정되지 않음" });
+      const Anthropic = require("@anthropic-ai/sdk");
+      const client = new Anthropic({ apiKey: key });
+      await client.messages.create({ model: "claude-haiku-4-5-20251001", max_tokens: 1, messages: [{ role: "user", content: "ping" }] });
+      res.json({ ok: true });
+    } else {
+      res.status(400).json({ ok: false, error: "잘못된 provider" });
+    }
+  } catch (err) {
+    res.json({ ok: false, error: (err as Error).message?.slice(0, 100) || "검증 실패" });
+  }
 });
 
 router.put("/config", (req: Request, res: Response) => {

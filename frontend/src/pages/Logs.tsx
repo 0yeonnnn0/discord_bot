@@ -13,9 +13,9 @@ export default function Logs() {
   const [perPage, setPerPage] = useState(20)
 
   const fetchData = () => {
-    fetch('/api/logs').then(r => r.json()).then(data => setLogs(data.reverse()))
-    fetch('/api/events').then(r => r.json()).then(setEvents)
-    fetch('/api/errors').then(r => r.json()).then(setErrors)
+    fetch('/api/logs').then(r => r.json()).then(data => setLogs(data.reverse())).catch(() => {})
+    fetch('/api/events').then(r => r.json()).then(setEvents).catch(() => {})
+    fetch('/api/errors').then(r => r.json()).then(setErrors).catch(() => {})
     fetch('/api/chat-logs?limit=200').then(r => r.json()).then(setChatLogs).catch(() => {})
   }
 

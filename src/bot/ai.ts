@@ -78,8 +78,10 @@ export async function callAI(history: HistoryMessage[], prompt: string): Promise
 }
 
 async function getAnthropicReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
+  const apiKey = state.config.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Anthropic API 키가 설정되지 않았습니다. Settings → API Keys에서 설정하세요.");
   const Anthropic = require("@anthropic-ai/sdk");
-  const client = new Anthropic({ apiKey: state.config.anthropicApiKey || process.env.ANTHROPIC_API_KEY });
+  const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: model || "claude-sonnet-4-20250514",
     max_tokens: 512,
@@ -90,8 +92,10 @@ async function getAnthropicReply(history: HistoryMessage[], prompt: string, mode
 }
 
 async function getOpenAIReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
+  const apiKey = state.config.openaiApiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OpenAI API 키가 설정되지 않았습니다. Settings → API Keys에서 설정하세요.");
   const OpenAI = require("openai");
-  const client = new OpenAI({ apiKey: state.config.openaiApiKey || process.env.OPENAI_API_KEY });
+  const client = new OpenAI({ apiKey });
   const messages = [
     { role: "system" as const, content: prompt },
     ...history,
@@ -105,8 +109,10 @@ async function getOpenAIReply(history: HistoryMessage[], prompt: string, model: 
 }
 
 async function getGoogleReply(history: HistoryMessage[], prompt: string, model: string): Promise<string> {
+  const apiKey = state.config.googleApiKey || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("Google API 키가 설정되지 않았습니다. Settings → API Keys에서 설정하세요.");
   const { GoogleGenerativeAI } = require("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(state.config.googleApiKey || process.env.GOOGLE_API_KEY);
+  const genAI = new GoogleGenerativeAI(apiKey);
   const isGemma = (model || "").startsWith("gemma");
 
   // Gemma doesn't support systemInstruction, inject prompt as first user message instead
