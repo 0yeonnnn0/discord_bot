@@ -37,6 +37,7 @@ export default function Settings() {
   const [judgeThreshold, setJudgeThreshold] = useState(5)
   const [judgePrompt, setJudgePrompt] = useState('')
   const [defaultJudgePrompt, setDefaultJudgePrompt] = useState('')
+  const [imageRecognition, setImageRecognition] = useState(true)
   const [webShowNickname, setWebShowNickname] = useState(false)
   const [webSystemPrompt, setWebSystemPrompt] = useState('')
   const [presets, setPresets] = useState<PresetInfo[]>([])
@@ -77,6 +78,7 @@ export default function Settings() {
       setJudgeThreshold(d.judgeThreshold || 5)
       setJudgePrompt(d.judgePrompt || '')
       setDefaultJudgePrompt(d.defaultJudgePrompt || '')
+      setImageRecognition(d.imageRecognition ?? true)
       setWebShowNickname(d.webShowNickname ?? false)
       setWebSystemPrompt(d.webSystemPrompt || '')
     }).catch(() => toast.error('설정 로드 실패'))
@@ -384,6 +386,22 @@ export default function Settings() {
                 <span className="model-info-value mono">gemini-embedding-002</span>
                 <span className="model-info-badge fixed">고정</span>
               </div>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={imageRecognition}
+                  onChange={e => {
+                    setImageRecognition(e.target.checked)
+                    fetch('/api/config', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ imageRecognition: e.target.checked }),
+                    }).then(() => toast.success(e.target.checked ? '이미지 인식 켜짐' : '이미지 인식 꺼짐')).catch(() => {})
+                  }} />
+                이미지 인식 (Gemini Vision)
+              </label>
+              <p className="form-hint">디스코드에 첨부된 이미지를 AI가 인식하여 대화에 반영합니다. Google 모델에서만 동작.</p>
             </div>
           </div>
 

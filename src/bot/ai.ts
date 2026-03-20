@@ -125,7 +125,10 @@ async function getGoogleReply(history: HistoryMessage[], prompt: string, model: 
     ...(isGemma ? [{ role: "user" as const, parts: [{ text: `[시스템 지시]\n${prompt}\n\n위 지시를 따라서 아래 대화에 응답해.` }] }, { role: "model" as const, parts: [{ text: "알겠어." }] }] : []),
     ...history.map((msg) => ({
       role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
-      parts: [{ text: msg.content }],
+      parts: [
+        { text: msg.content },
+        ...(msg.imageData ? [{ inlineData: { mimeType: msg.imageData.mimeType, data: msg.imageData.data } }] : []),
+      ],
     })),
   ];
 

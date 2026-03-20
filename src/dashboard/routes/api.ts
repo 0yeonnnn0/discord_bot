@@ -168,6 +168,9 @@ router.put("/config", (req: Request, res: Response) => {
   if (req.body.webSystemPrompt !== undefined) {
     state.config.webSystemPrompt = req.body.webSystemPrompt;
   }
+  if (req.body.imageRecognition !== undefined) {
+    state.config.imageRecognition = !!req.body.imageRecognition;
+  }
   res.json(safeConfig());
 });
 

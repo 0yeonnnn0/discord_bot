@@ -7,6 +7,25 @@ import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
 import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted } from "./commands";
 import { fetchUrlContext } from "./scrape";
+import type { ImageData } from "./history";
+
+const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+
+async function extractImage(message: Message): Promise<ImageData | undefined> {
+  if (!state.config.imageRecognition) return undefined;
+  const attachment = message.attachments.find(
+    a => a.contentType && IMAGE_MIMES.has(a.contentType) && (a.size || 0) <= MAX_IMAGE_SIZE
+  );
+  if (!attachment) return undefined;
+  try {
+    const res = await fetch(attachment.url);
+    const buf = Buffer.from(await res.arrayBuffer());
+    return { mimeType: attachment.contentType!, data: buf.toString("base64") };
+  } catch {
+    return undefined;
+  }
+}
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
@@ -172,9 +191,12 @@ client.on("messageCreate", async (message: Message) => {
   const channelName = "name" in message.channel ? (message.channel as any).name as string : "unknown";
   const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
 
+  const imageData = await extractImage(message);
+
   history.addMessage(channelId, {
     role: "user",
-    content: `${message.author.displayName}: ${cleanContent}`,
+    content: `${message.author.displayName}: ${cleanContent}${imageData ? " [이미지 첨부]" : ""}`,
+    imageData,
   });
 
   state.stats.messagesProcessed++;
