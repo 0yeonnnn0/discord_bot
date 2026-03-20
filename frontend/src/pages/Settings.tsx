@@ -20,10 +20,17 @@ const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: 'gemma-3-1b-it', label: 'Gemma 3 1B' },
   ],
   openai: [
+    { value: 'gpt-5', label: 'GPT-5' },
+    { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+    { value: 'gpt-5-nano', label: 'GPT-5 Nano' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
   ],
   anthropic: [
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
     { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
   ],
