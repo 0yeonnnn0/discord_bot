@@ -130,9 +130,9 @@ export function formatContext(results: SearchResult[]): string {
   const lines = results.map((r) => {
     const date = new Date(r.timestamp).toLocaleDateString("ko-KR");
     const matchPct = Math.round(r.score * 100);
-    return `[${date} #${r.channel} (유사도 ${matchPct}%)]\n${r.text}`;
+    return `<past_conversation date="${date}" channel="${r.channel}" relevance="${matchPct}%">\n${r.text}\n</past_conversation>`;
   });
-  return `\n\n[관련 과거 대화 — 아래 내용은 과거에 이 서버에서 나눈 대화야. 자연스럽게 참고해서 대화해. 직접 인용하지 말고, 맥락을 이해하는 데 활용해.]\n${lines.join("\n\n")}`;
+  return `\n아래는 과거에 이 서버에서 나눈 대화야. 직접 인용하지 말고, 맥락을 이해하는 데 자연스럽게 활용해.\n${lines.join("\n")}`;
 }
 
 export async function getStats(): Promise<{ vectorCount: number; indexCreated: boolean }> {
