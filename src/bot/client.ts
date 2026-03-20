@@ -132,9 +132,11 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
 
   const startTime = Date.now();
   try {
+    let ragHitCount = 0;
     const reply = await enqueue(async () => {
       const channelHistory = history.getHistory(channelId);
       const ragResults = await rag.searchRelevant(cleanContent);
+      ragHitCount = ragResults.length;
       const urlContext = await fetchUrlContext(cleanContent);
       const ragContext = rag.formatContext(ragResults) + urlContext;
       return judgeAndReply(channelHistory, ragContext, message.author.id);
@@ -143,7 +145,6 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
     const responseTime = Date.now() - startTime;
 
     if (!reply) {
-      // AI decided to skip — add dedicated log entry
       addLog({
         guild: guildName,
         channel: channelName,
@@ -153,7 +154,7 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
         triggerReason: "random",
         botReply: "<SKIP>",
         responseTime,
-        ragHits: 0,
+        ragHits: ragHitCount,
         error: null,
         model: lastUsedModel,
       });
@@ -173,6 +174,7 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
       lastLog.triggerReason = "random";
       lastLog.botReply = reply;
       lastLog.responseTime = responseTime;
+      lastLog.ragHits = ragHitCount;
       lastLog.model = lastUsedModel;
     }
   } catch (err) {
