@@ -90,6 +90,10 @@ export const commands = [
     ),
 
   new SlashCommandBuilder()
+    .setName("mute-status")
+    .setDescription("이 채널의 음소거 남은 시간 확인"),
+
+  new SlashCommandBuilder()
     .setName("reply")
     .setDescription("봇 응답 모드 변경")
     .addStringOption(opt =>
@@ -147,6 +151,9 @@ export async function handleInteraction(interaction: ChatInputCommandInteraction
       break;
     case "mute":
       await handleMute(interaction);
+      break;
+    case "mute-status":
+      await handleMuteStatus(interaction);
       break;
     case "reply":
       await handleReply(interaction);
@@ -386,6 +393,18 @@ async function handleMute(interaction: ChatInputCommandInteraction): Promise<voi
   const until = Date.now() + minutes * 60 * 1000;
   mutedChannels.set(channelId, until);
   await interaction.reply(`${minutes}분간 입 다물고 있겠다냥... \`/mute 0\` 하면 다시 말해준다냥 0w0`);
+}
+
+async function handleMuteStatus(interaction: ChatInputCommandInteraction): Promise<void> {
+  const until = mutedChannels.get(interaction.channelId);
+  if (!until || Date.now() > until) {
+    mutedChannels.delete(interaction.channelId);
+    await interaction.reply("이 채널은 음소거 상태가 아니다냥! 0w0");
+    return;
+  }
+  const remainMs = until - Date.now();
+  const mins = Math.ceil(remainMs / 60000);
+  await interaction.reply(`이 채널은 아직 **${mins}분** 남았다냥... \`/mute 0\` 하면 바로 해제된다냥!`);
 }
 
 export function isChannelMuted(channelId: string): boolean {
