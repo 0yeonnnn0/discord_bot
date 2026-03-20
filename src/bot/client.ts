@@ -168,15 +168,19 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
     state.stats.repliesSent++;
     trackUser(message.author.id, message.author.displayName, true);
 
-    const lastLog = state.logs[state.logs.length - 1];
-    if (lastLog) {
-      lastLog.botReplied = true;
-      lastLog.triggerReason = "random";
-      lastLog.botReply = reply;
-      lastLog.responseTime = responseTime;
-      lastLog.ragHits = ragHitCount;
-      lastLog.model = lastUsedModel;
-    }
+    addLog({
+      guild: guildName,
+      channel: channelName,
+      author: message.author.displayName,
+      content: cleanContent,
+      botReplied: true,
+      triggerReason: "random",
+      botReply: reply,
+      responseTime,
+      ragHits: ragHitCount,
+      error: null,
+      model: lastUsedModel,
+    });
   } catch (err) {
     const isRateLimit = (err as Error).message?.includes("429") || (err as Error).message?.includes("quota");
     addError(isRateLimit ? "rate_limit" : "api_error", (err as Error).message, `channel: ${channelName}, guild: ${guildName}`);
