@@ -4,6 +4,7 @@ import path from "path";
 const DATA_DIR = path.join(__dirname, "../../data");
 const PRESETS_FILE = path.join(DATA_DIR, "presets.json");
 const ACTIVE_FILE = path.join(DATA_DIR, "active-preset.json");
+const ORDER_FILE = path.join(DATA_DIR, "preset-order.json");
 
 // ── Types ──
 export interface Preset {
@@ -324,7 +325,22 @@ let activePresetId = "neko";
 try {
   if (fs.existsSync(PRESETS_FILE)) {
     const saved = JSON.parse(fs.readFileSync(PRESETS_FILE, "utf-8"));
-    presets = { ...DEFAULT_PRESETS, ...saved };
+    const merged: Record<string, Preset> = { ...DEFAULT_PRESETS, ...saved };
+    // Restore saved order
+    if (fs.existsSync(ORDER_FILE)) {
+      const order: string[] = JSON.parse(fs.readFileSync(ORDER_FILE, "utf-8"));
+      const ordered: Record<string, Preset> = {};
+      for (const id of order) {
+        if (merged[id]) ordered[id] = merged[id];
+      }
+      // Append any new presets not in saved order
+      for (const [id, p] of Object.entries(merged)) {
+        if (!ordered[id]) ordered[id] = p;
+      }
+      presets = ordered;
+    } else {
+      presets = merged;
+    }
     console.log("저장된 프리셋 복원 완료");
   }
   if (fs.existsSync(ACTIVE_FILE)) {
@@ -353,6 +369,7 @@ function savePresets(): void {
     }
     fs.writeFileSync(PRESETS_FILE, JSON.stringify(custom, null, 2));
     fs.writeFileSync(ACTIVE_FILE, JSON.stringify({ activePresetId }));
+    fs.writeFileSync(ORDER_FILE, JSON.stringify(Object.keys(presets)));
   } catch (err) {
     console.error("프리셋 저장 실패:", (err as Error).message);
   }

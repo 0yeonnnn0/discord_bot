@@ -11,7 +11,7 @@ export default function Dashboard() {
   const fetchData = () => {
     fetch('/api/status').then(r => r.json()).then(setStatus)
     fetch('/api/user-stats').then(r => r.json()).then(setUserStats)
-    fetch('/api/keywords').then(r => r.json()).then(setKeywords)
+    fetch('/api/keywords').then(r => r.json()).then((d: Keyword[]) => setKeywords(d.slice(0, 10)))
   }
 
   useEffect(() => {

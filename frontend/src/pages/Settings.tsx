@@ -56,6 +56,9 @@ export default function Settings() {
   const [testMsg, setTestMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'prompt' | 'ai' | 'memory'>('ai')
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
+  const [editingKeys, setEditingKeys] = useState<Record<string, string>>({})
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const fetchPresets = () => {
@@ -80,6 +83,7 @@ export default function Settings() {
     fetchPresets()
     fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
     fetch('/api/rag/timeline').then(r => r.json()).then(setTimeline)
+    fetch('/api/keys').then(r => r.json()).then(setApiKeys)
   }, [])
 
   useEffect(() => {
@@ -271,6 +275,21 @@ export default function Settings() {
     }
   }
 
+  const saveKeys = async () => {
+    const updates: Record<string, string> = {}
+    for (const [key, value] of Object.entries(editingKeys)) {
+      if (value !== undefined && value !== '') updates[key] = value
+    }
+    if (Object.keys(updates).length === 0) { toast('변경된 키가 없습니다'); return }
+    const res = await fetch('/api/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+    if (res.ok) {
+      toast.success('API 키 저장 완료')
+      const d = await fetch('/api/keys').then(r => r.json())
+      setApiKeys(d)
+      setEditingKeys({})
+    } else toast.error('저장 실패')
+  }
+
   const models = MODEL_OPTIONS[provider] || []
 
   return (
@@ -280,30 +299,24 @@ export default function Settings() {
         <p className="page-desc">봇 설정을 변경하고 실시간으로 테스트합니다</p>
       </div>
 
-      <div className="settings-layout">
-        {/* Sidebar nav */}
-        <nav className="settings-sidebar">
-          {[
-            { id: 'model', label: 'AI Model' },
-            { id: 'reply-mode', label: 'Reply Mode' },
-            { id: 'web-chat', label: 'Web Chat' },
-            { id: 'rag', label: 'RAG Memory' },
-            { id: 'presets', label: 'Presets' },
-          ].map(s => (
-            <a key={s.id} className="settings-sidebar-link" href={`#${s.id}`}
-              onClick={e => {
-                e.preventDefault()
-                document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}>
-              {s.label}
-            </a>
-          ))}
-        </nav>
+      <div className="settings-tabs">
+        {([
+          { id: 'ai' as const, label: 'AI 설정' },
+          { id: 'prompt' as const, label: '프롬프트' },
+          { id: 'memory' as const, label: '메모리' },
+        ] as const).map(tab => (
+          <button key={tab.id}
+            className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
         <div className="settings-main">
         <div className="command-center">
-        {/* Left Column */}
         <div className="stagger">
+        {activeTab === 'ai' && (<>
           {/* AI Model */}
           <div className="panel" id="model">
             <div className="panel-header">
@@ -438,6 +451,36 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* API Keys */}
+          <div className="panel" id="api-keys">
+            <div className="panel-header">
+              <span className="panel-title">API Keys</span>
+              <button className="btn btn-primary" onClick={saveKeys}>Save</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              {[
+                { key: 'googleApiKey', label: 'Google API Key', hint: 'Gemini / Gemma 모델에 필요' },
+                { key: 'openaiApiKey', label: 'OpenAI API Key', hint: 'GPT 모델에 필요' },
+                { key: 'anthropicApiKey', label: 'Anthropic API Key', hint: 'Claude 모델에 필요' },
+                { key: 'dashboardSecret', label: 'Dashboard Password', hint: '대시보드 로그인 비밀번호 (변경 시 새 로그인부터 적용)' },
+              ].map(({ key, label, hint }) => (
+                <div key={key}>
+                  <div className="card-label" style={{ marginBottom: 'var(--space-2)' }}>{label}</div>
+                  <input type="text"
+                    value={editingKeys[key] !== undefined ? editingKeys[key] : apiKeys[key] || ''}
+                    onChange={e => setEditingKeys(prev => ({ ...prev, [key]: e.target.value }))}
+                    onFocus={() => { if (editingKeys[key] === undefined) setEditingKeys(prev => ({ ...prev, [key]: '' })) }}
+                    placeholder={apiKeys[key] ? `현재: ${apiKeys[key]}` : '설정되지 않음'}
+                    spellCheck={false} autoComplete="off"
+                    style={{ fontFamily: 'var(--mono)' }} />
+                  <p className="form-hint">{hint}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>)}
+
+          {activeTab === 'memory' && (<>
           {/* RAG Memory */}
           <div className="panel" id="rag">
             <div className="panel-header">
@@ -609,7 +652,9 @@ export default function Settings() {
               </div>
             )}
           </div>
+          </>)}
 
+          {activeTab === 'prompt' && (<>
           {/* Prompt Presets */}
           <div className="panel" id="presets">
             <div className="panel-header">
@@ -746,9 +791,9 @@ export default function Settings() {
               <p className="form-hint">Owner Suffix: 주인에게만 추가되는 프롬프트. User Suffix: 일반 유저에게 추가.</p>
             </div>
           )}
+        </>)}
         </div>
 
-      </div>
       </div>
       </div>
 
