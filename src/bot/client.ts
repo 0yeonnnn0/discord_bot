@@ -6,6 +6,7 @@ import { state, addLog, addEvent, addError, trackUser, trackKeywords } from "../
 import { enqueue, canUserRequest, markUserRequest } from "./queue";
 import { getPresets, setActivePreset, getActivePresetId } from "./prompt";
 import { registerCommands, handleInteraction, handleAutocomplete, isChannelMuted } from "./commands";
+import { fetchUrlContext } from "./scrape";
 
 const conversationBuffer = new Map<string, { content: string }[]>();
 const BUFFER_SIZE = 5;
@@ -115,7 +116,8 @@ async function triggerJudge(channelId: string, message: Message, channelName: st
     const reply = await enqueue(async () => {
       const channelHistory = history.getHistory(channelId);
       const ragResults = await rag.searchRelevant(cleanContent);
-      const ragContext = rag.formatContext(ragResults);
+      const urlContext = await fetchUrlContext(cleanContent);
+      const ragContext = rag.formatContext(ragResults) + urlContext;
       return judgeAndReply(channelHistory, ragContext, message.author.id);
     });
 
@@ -300,7 +302,8 @@ client.on("messageCreate", async (message: Message) => {
       const channelHistory = history.getHistory(channelId);
       const ragResults = await rag.searchRelevant(cleanContent);
       ragHitCount = ragResults.length;
-      const ragContext = rag.formatContext(ragResults);
+      const urlContext = await fetchUrlContext(cleanContent);
+      const ragContext = rag.formatContext(ragResults) + urlContext;
       return getReply(channelHistory, ragContext, message.author.id);
     });
 
