@@ -270,28 +270,75 @@ router.post("/rag/upload", upload.single("file"), async (req: Request, res: Resp
   if (!req.file) return res.status(400).json({ error: "파일이 필요합니다" });
   try {
     const text = req.file.buffer.toString("utf-8");
-    const lines = text.split("\n");
-    const msgRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}\s+[오전후]+\s+\d{1,2}:\d{2}),\s*(.+?)\s*:\s*(.+)$/;
-    const messages: { content: string }[] = [];
+    const filename = req.file.originalname || "unknown";
+    const isMd = filename.endsWith(".md");
 
-    for (const line of lines) {
-      const match = line.match(msgRegex);
-      if (match) messages.push({ content: `${match[2]}: ${match[3]}` });
+    if (isMd) {
+      // ── Obsidian / Markdown 파일 ──
+      // Strip YAML frontmatter
+      const content = text.replace(/^---[\s\S]*?---\n*/m, "").trim();
+      if (!content) return res.status(400).json({ error: "노트 내용이 비어있습니다" });
+
+      // Split by headings or paragraphs into chunks (~500 chars)
+      const chunks: string[] = [];
+      const sections = content.split(/\n(?=#{1,3}\s)/);
+      for (const section of sections) {
+        if (section.trim().length === 0) continue;
+        if (section.length <= 500) {
+          chunks.push(section.trim());
+        } else {
+          // Split long sections by double newline
+          const paragraphs = section.split(/\n\n+/);
+          let buf = "";
+          for (const p of paragraphs) {
+            if (buf.length + p.length > 500 && buf) {
+              chunks.push(buf.trim());
+              buf = "";
+            }
+            buf += (buf ? "\n\n" : "") + p;
+          }
+          if (buf.trim()) chunks.push(buf.trim());
+        }
+      }
+
+      const noteName = filename.replace(/\.md$/, "");
+      let stored = 0;
+      for (const chunk of chunks) {
+        await storeConversation({
+          channel: `note:${noteName}`,
+          messages: [{ content: chunk }],
+          timestamp: Date.now(),
+        });
+        stored++;
+      }
+
+      const stats = await getRagStats();
+      res.json({ parsed: chunks.length, chunks: stored, totalVectors: stats.vectorCount, type: "markdown" });
+    } else {
+      // ── KakaoTalk 채팅 파일 ──
+      const lines = text.split("\n");
+      const msgRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}\s+[오전후]+\s+\d{1,2}:\d{2}),\s*(.+?)\s*:\s*(.+)$/;
+      const messages: { content: string }[] = [];
+
+      for (const line of lines) {
+        const match = line.match(msgRegex);
+        if (match) messages.push({ content: `${match[2]}: ${match[3]}` });
+      }
+
+      if (messages.length === 0) {
+        return res.status(400).json({ error: "파싱된 메시지가 없습니다 (.md 또는 카카오톡 .txt 파일만 지원)" });
+      }
+
+      const chunkSize = 5;
+      let stored = 0;
+      for (let i = 0; i < messages.length; i += chunkSize) {
+        await storeConversation({ channel: "kakaotalk-import", messages: messages.slice(i, i + chunkSize), timestamp: Date.now() });
+        stored++;
+      }
+
+      const stats = await getRagStats();
+      res.json({ parsed: messages.length, chunks: stored, totalVectors: stats.vectorCount, type: "kakaotalk" });
     }
-
-    if (messages.length === 0) {
-      return res.status(400).json({ error: "파싱된 메시지가 없습니다" });
-    }
-
-    const chunkSize = 5;
-    let stored = 0;
-    for (let i = 0; i < messages.length; i += chunkSize) {
-      await storeConversation({ channel: "kakaotalk-import", messages: messages.slice(i, i + chunkSize), timestamp: Date.now() });
-      stored++;
-    }
-
-    const stats = await getRagStats();
-    res.json({ parsed: messages.length, chunks: stored, totalVectors: stats.vectorCount });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

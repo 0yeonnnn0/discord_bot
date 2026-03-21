@@ -281,8 +281,8 @@ export default function Settings() {
       }
     }
     setUploadStatus('')
-    toast.success(`${totalParsed.toLocaleString()}개 메시지 → ${totalChunks}개 벡터 저장`)
-    fetch('/api/rag-stats').then(r => r.json()).then(setRagStats)
+    if (totalChunks > 0) toast.success(`${totalParsed.toLocaleString()}개 청크 → ${totalChunks}개 벡터 저장`)
+    fetch('/api/rag-stats').then(r => r.json()).then(setRagStats).catch(() => {})
     e.target.value = ''
   }
 
@@ -566,10 +566,18 @@ export default function Settings() {
                 <div className="card-value mono text-accent">{ragStats.vectorCount}</div>
               </div>
               <div className="rag-stat-item">
-                <div className="card-label">Chunk Size</div>
-                <div className="card-value mono" style={{ color: 'var(--text-secondary)', fontSize: '0.93rem' }}>5 messages</div>
+                <div className="card-label">Upload</div>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <input id="rag-upload" type="file" accept=".md,.txt" multiple
+                    onChange={handleRagUpload} style={{ display: 'none' }} />
+                  <label htmlFor="rag-upload" className="btn btn-ghost"
+                    style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '4px 12px' }}>
+                    {uploadStatus || '.md / .txt 업로드'}
+                  </label>
+                </div>
               </div>
             </div>
+            <p className="form-hint">Obsidian 노트(.md) 또는 카카오톡 대화(.txt)를 업로드하면 AI가 지식으로 활용합니다.</p>
 
             {/* Timeline Chart */}
             {timeline.length > 0 && (
